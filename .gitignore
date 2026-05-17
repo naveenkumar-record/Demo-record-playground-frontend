@@ -1,0 +1,64 @@
+# =========================
+# 🔹 Dependencies
+# =========================
+node_modules/
+.pnpm-store/
+.yarn/
+.yarn-cache/
+.yarnrc.yml
+
+# =========================
+# 🔹 Build outputs
+# =========================
+.next/
+out/
+build/
+dist/
+
+# =========================
+# 🔹 Logs
+# =========================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# 🔹 Environment files
+# =========================
+.env
+.env.local
+.env.development.local
+.env.production.local
+
+# =========================
+# 🔹 Cache
+# =========================
+.cache/
+.parcel-cache/
+
+# =========================
+# 🔹 Vercel
+# =========================
+.vercel/
+
+# =========================
+# 🔹 TypeScript
+# =========================
+*.tsbuildinfo
+
+# =========================
+# 🔹 IDE / OS
+# =========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# =========================
+# 🔹 Misc
+# =========================
+*.zip
+*.tar
+*.gz
+*.rar
