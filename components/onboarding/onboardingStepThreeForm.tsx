@@ -64,7 +64,7 @@ export default function OnboardingStepThreeForm({
     try {
       await inviteMember({ orgId, email: nextInviteEmail, role }, accessToken);
       toast.message("Invite sent successfully.");
-      router.push("/dashboard");
+      router.push("/bluecollar/dashboard");
     } catch (err: unknown) {
       toast.message(err instanceof Error ? err.message : "Failed to send invite.");
     } finally {

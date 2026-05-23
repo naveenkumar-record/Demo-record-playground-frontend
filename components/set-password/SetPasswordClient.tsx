@@ -76,7 +76,7 @@ export default function Page() {
         setResetToken(token);
       }
       await authApi.setPasswordWithCode({ resetToken: token, password });
-      router.push(`/dashboard`);
+      router.push("/bluecollar/dashboard");
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Invalid or expired code. Please try again."));
     } finally {

@@ -39,7 +39,7 @@ export default function Page() {
         setAuthSession(response.data.accessToken, response.data.user);
       }
       router.push(
-        response.data?.hasOrganization ? "/dashboard" : "/onboarding",
+        response.data?.hasOrganization ? "/bluecollar/dashboard" : "/onboarding",
       );
     } catch (error) {
       toast.message(

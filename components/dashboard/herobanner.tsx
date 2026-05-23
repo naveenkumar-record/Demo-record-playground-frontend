@@ -23,7 +23,7 @@ export default function HeroBanner() {
         <div className="mt-4 flex gap-3">
           <Button
             className="bg-[#FF5723] hover:bg-[#FF5723] text-white text-sm px-6 py-2 h-9 cursor-pointer"
-            onClick={() => router.push("/workflows")}
+            onClick={() => router.push("/bluecollar/workflows")}
           >
             <Plus className="h-4 w-4" />
             Create Your First Workflow

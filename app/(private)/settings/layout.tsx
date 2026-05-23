@@ -26,7 +26,7 @@ export default function SettingsLayout({
       <div className="flex shrink-0 items-center border-b border-[#e7e7e7] bg-white px-5 py-3">
         <button
           type="button"
-          onClick={() => router.push("/dashboard")}
+          onClick={() => router.back()}
           className="flex cursor-pointer items-center gap-1.5 text-lg font-semibold text-[#1a1a1a] transition-opacity hover:opacity-60"
         >
           <ChevronLeft className="h-[18px] w-[18px]" strokeWidth={2.5} />

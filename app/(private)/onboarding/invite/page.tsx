@@ -49,7 +49,7 @@ export default async function Page({
         <OnboardingStepThreeForm email={email} orgId={orgId} />
         <a
           className="mt-[10px] inline-block cursor-pointer text-[14px]"
-          href="/dashboard"
+          href="/bluecollar/dashboard"
         >
           I&apos;ll invite my team later
         </a>

@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/breadcrumb";
 
 import SidebarNav    from "./sidebarNav";
-import { nav }       from "./navConfig";
+import { bluecollarNav, whitecollarNav } from "./navConfig";
 import ProfileMenu   from "./profileMenu";
 import { useOrg }    from "./orgContext";
 import { useProject } from "./projectContext";
@@ -88,6 +88,8 @@ type Crumb = {
 function getBreadcrumbs(pathname: string): Crumb[] {
   if (pathname.startsWith("/settings")) return [];
 
+  const nav = pathname.startsWith("/whitecollar") ? whitecollarNav : bluecollarNav;
+
   for (const { group, items } of nav) {
     for (const item of items) {
       if (item.href === pathname) {
@@ -101,7 +103,10 @@ function getBreadcrumbs(pathname: string): Crumb[] {
       }
     }
   }
-  return [{ label: "Dashboard", href: "/dashboard", current: true }];
+  const defaultHref = pathname.startsWith("/whitecollar")
+    ? "/whitecollar/dashboard"
+    : "/bluecollar/dashboard";
+  return [{ label: "Dashboard", href: defaultHref, current: true }];
 }
 
 export default function Header({ userInitial, email }: HeaderProps) {
