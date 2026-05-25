@@ -1,73 +1,52 @@
-"use client";
+import { getServerSessionUser } from "@/lib/server-session";
+import { getUserOrganizations, OrgData } from "@/api/user-access.api";
+import { OrgProvider } from "@/components/layout/orgContext";
+import { ProjectBridge } from "@/components/layout/projectContext";
+import { TestModeProvider } from "@/components/layout/testModeContext";
+import AppShell from "@/components/layout/appShell";
+import Header from "@/components/layout/header";
+import SettingsShell from "@/components/settings/settingsShell";
+import { cookies } from "next/headers";
 
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
+async function fetchOrganizations(): Promise<OrgData[]> {
+  try {
+    const cookieStore = await cookies();
+    const accessToken = cookieStore.get("auth_token")?.value;
+    if (!accessToken) return [];
 
-const SETTINGS_NAV = [
-  { label: "Company Details", href: "/settings" },
-  { label: "Users",           href: "/settings/users" },
-  { label: "Projects",        href: "/settings/projects" },
-  { label: "Billing",         href: "/settings/billing" },
-];
+    const orgsRes = await getUserOrganizations(accessToken);
+    return orgsRes.data?.organizations ?? [];
+  } catch {
+    return [];
+  }
+}
 
-export default function SettingsLayout({
+export default async function SettingsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const [user, organizations] = await Promise.all([
+    getServerSessionUser(),
+    fetchOrganizations(),
+  ]);
+
+  const email       = user?.email ?? "";
+  const userInitial = email.charAt(0).toUpperCase() || "U";
 
   return (
-    <div className="flex h-full flex-col">
-
-      <div className="flex shrink-0 items-center border-b border-[#e7e7e7] bg-white px-5 py-3">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="flex cursor-pointer items-center gap-1.5 text-lg font-semibold text-[#1a1a1a] transition-opacity hover:opacity-60"
-        >
-          <ChevronLeft className="h-[18px] w-[18px]" strokeWidth={2.5} />
-          Settings
-        </button>
-      </div>
-
-      <div className="flex flex-1 min-h-0">
-
-        {/* Inner sidebar */}
-        <aside className="w-[200px] shrink-0 overflow-y-auto border-r border-[#e7e7e7] bg-white px-3 py-5">
-          <nav className="flex flex-col gap-0.5">
-            {SETTINGS_NAV.map(({ label, href }) => {
-              const active =
-                href === "/settings"
-                  ? pathname === "/settings"
-                  : pathname === href || pathname.startsWith(href + "/");
-
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={cn(
-                    "rounded-md px-3 py-2 text-[15px] transition-colors",
-                    active
-                      ? "bg-[#f0f0f0] font-medium text-[#1a1a1a]"
-                      : "text-[#6a6a6a] hover:bg-[#f5f5f5] hover:text-[#1a1a1a]",
-                  )}
-                >
-                  {label}
-                </Link>
-              );
-            })}
-          </nav>
-        </aside>
-
-        <div className="flex-1 min-w-0 overflow-y-auto">
-          {children}
-        </div>
-
-      </div>
-    </div>
+    <OrgProvider organizations={organizations}>
+      <ProjectBridge>
+        <TestModeProvider>
+          <div className="h-screen overflow-hidden bg-[#f8f8f8]">
+            <AppShell header={<Header userInitial={userInitial} email={email} />}>
+              <SettingsShell>
+                {children}
+              </SettingsShell>
+            </AppShell>
+          </div>
+        </TestModeProvider>
+      </ProjectBridge>
+    </OrgProvider>
   );
 }

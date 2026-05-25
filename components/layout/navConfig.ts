@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  ClipboardList,
   FileText,
   LayoutDashboard,
   Network,
@@ -55,6 +56,7 @@ export const whitecollarNav: NavGroup[] = [
     group: "Verification & Skills",
     items: [
       { label: "Workflows", href: "/whitecollar/workflows", icon: Network },
+      { label: "Assessments", href: "/whitecollar/assessments", icon: ClipboardList },
       { label: "Requests", href: "/whitecollar/requests", icon: FileText },
     ],
   },

@@ -8,6 +8,7 @@ const TEST_MODE_PATHS = [
   "/bluecollar/workflows",
   "/whitecollar/dashboard",
   "/whitecollar/workflows",
+  "/whitecollar/assessments",
   "/whitecollar/requests",
 ];
 
