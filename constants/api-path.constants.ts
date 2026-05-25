@@ -51,6 +51,11 @@ const apiPathConstants = {
   projects: {
     base: "/projects",
   },
+  assessments: {
+    base: "/assessments",
+    toggle: (id: string) => `/assessments/${id}/toggle`,
+    delete: (id: string) => `/assessments/${id}`,
+  },
 } as const;
 
 export default apiPathConstants;
