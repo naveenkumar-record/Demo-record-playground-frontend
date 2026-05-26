@@ -2,19 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  FileText,
   Mic,
   MoreVertical,
   Pencil,
   Plus,
   Search,
   Send,
+  Upload,
   Video,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
   createWorkflow,
+  createWorkflowCandidates,
   listWorkflows,
   searchWorkflowSkills,
   type CreateWorkflowPayload,
@@ -37,13 +38,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -57,25 +51,17 @@ import { cn } from "@/lib/utils";
 
 const PAGE_LIMIT = 5;
 
-const workflowTypes = ["Skill Assessment", "Job Description", "Profile Verification"];
-
 const methods = [
-  {
-    value: "text",
-    title: "Text Verification",
-    copy: "Verification is conducted through skill-based MCQ.",
-    icon: FileText,
-  },
   {
     value: "voice",
     title: "Voice Verification",
-    copy: "Verification is conducted through voice responses.",
+    copy: "AI calls the candidate on their phone and has a 10-minute conversation in their language. Works for all candidates including those without WhatsApp.",
     icon: Mic,
   },
   {
     value: "video",
     title: "Video Verification",
-    copy: "Verification is conducted through video responses.",
+    copy: "Candidate receives a WhatsApp link and completes a short video conversation with the AI. Higher confidence result.",
     icon: Video,
   },
 ] as const;
@@ -93,10 +79,11 @@ function emptyForm(): CreateWorkflowPayload {
     orgId: "",
     name: "",
     workflowType: "Skill Assessment",
+    jobDescription: "",
     startMessage: "",
     completionMessage: "",
     skillIds: [],
-    verificationMethod: "text",
+    verificationMethod: "voice",
     mode: "test",
   };
 }
@@ -113,6 +100,17 @@ export default function WorkflowPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [open, setOpen] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [requestSuccessOpen, setRequestSuccessOpen] = useState(false);
+  const [requestWorkflow, setRequestWorkflow] = useState<WorkflowItem | null>(null);
+  const [requestStep, setRequestStep] = useState<1 | 2>(1);
+  const [requestTab, setRequestTab] = useState<"bulk" | "manual">("bulk");
+  const [candidateName, setCandidateName] = useState("");
+  const [candidatePhone, setCandidatePhone] = useState("");
+  const [candidateRole, setCandidateRole] = useState("");
+  const [csvCandidates, setCsvCandidates] = useState<{ name: string; phoneNumber: string; role?: string }[]>([]);
+  const [sendingRequest, setSendingRequest] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [skillPickerOpen, setSkillPickerOpen] = useState(false);
   const [skillQuery, setSkillQuery] = useState("");
@@ -209,8 +207,8 @@ export default function WorkflowPage() {
     setForm((current) => {
       const skillId = skill.skillId;
       const exists = current.skillIds.includes(skillId);
-      if (!exists && current.skillIds.length >= 5) {
-        toast.message("You can add up to 5 skills per workflow.");
+      if (!exists && current.skillIds.length >= 2) {
+        toast.message("You can add up to 2 skills per workflow.");
         return current;
       }
 
@@ -247,6 +245,10 @@ export default function WorkflowPage() {
       toast.error("Select at least one skill");
       return;
     }
+    if (!(form.jobDescription ?? "").trim()) {
+      toast.error("Job description is required");
+      return;
+    }
 
     const token = getAccessToken();
     if (!token) return;
@@ -264,6 +266,7 @@ export default function WorkflowPage() {
       );
       toast.success("Workflow created successfully");
       setOpen(false);
+      setSuccessOpen(true);
       resetDialog();
       setPage(1);
       loadWorkflows();
@@ -278,6 +281,57 @@ export default function WorkflowPage() {
   const totalCount = pagination?.total ?? 0;
   const currentFrom = totalCount === 0 ? 0 : (page - 1) * PAGE_LIMIT + 1;
   const currentTo = Math.min(page * PAGE_LIMIT, totalCount);
+  const openRequest = (workflow: WorkflowItem) => {
+    setRequestWorkflow(workflow);
+    setRequestStep(1);
+    setRequestTab("bulk");
+    setCandidateName("");
+    setCandidatePhone("");
+    setCandidateRole("");
+    setCsvCandidates([]);
+    setRequestOpen(true);
+  };
+
+  const parseCsv = async (file: File) => {
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const dataLines = lines[0]?.toLowerCase().includes("name") ? lines.slice(1) : lines;
+    const candidates = dataLines.map((line) => {
+      const [name = "", phoneNumber = "", role = ""] = line.split(",").map((part) => part.trim());
+      return { name, phoneNumber, role };
+    }).filter((candidate) => candidate.name && candidate.phoneNumber);
+    setCsvCandidates(candidates);
+  };
+
+  const sendRequest = async () => {
+    const token = getAccessToken();
+    if (!token || !requestWorkflow) return;
+
+    const candidates = requestTab === "manual"
+      ? [{ name: candidateName, phoneNumber: `91${candidatePhone.replace(/[^\d]/g, "")}`, role: candidateRole }]
+      : csvCandidates;
+
+    if (requestTab === "manual" && (!candidateName.trim() || candidatePhone.replace(/[^\d]/g, "").length < 8)) {
+      toast.error("Candidate name and phone number are required");
+      return;
+    }
+
+    if (candidates.length === 0) {
+      toast.error("Add at least one candidate");
+      return;
+    }
+
+    setSendingRequest(true);
+    try {
+      await createWorkflowCandidates(requestWorkflow.workflowId, candidates, token);
+      setRequestOpen(false);
+      setRequestSuccessOpen(true);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to send request");
+    } finally {
+      setSendingRequest(false);
+    }
+  };
 
   return (
     <div className="space-y-5 p-6">
@@ -350,7 +404,12 @@ export default function WorkflowPage() {
                   </TableCell>
                   <TableCell className="pr-8">
                     <div className="flex justify-end gap-3">
-                      <Button variant="outline" size="sm" className="h-8 gap-2 text-[12px]">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-2 text-[12px]"
+                        onClick={() => openRequest(workflow)}
+                      >
                         Generate Request
                         <Send className="h-3.5 w-3.5" />
                       </Button>
@@ -434,82 +493,58 @@ export default function WorkflowPage() {
 
               <div className="space-y-2">
                 <Label className="text-[13px] text-[#6a6a6a]">Workflow Type</Label>
-                <Select
+                <Input
                   value={form.workflowType}
-                  onValueChange={(value) => updateForm("workflowType", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {workflowTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-[13px] text-[#6a6a6a]">Start Message</Label>
-                <Textarea
-                  className="min-h-28 resize-none"
-                  maxLength={400}
-                  value={form.startMessage}
-                  placeholder="Enter the message shown when the workflow begins"
-                  onChange={(event) => updateForm("startMessage", event.target.value)}
+                  onChange={(event) => updateForm("workflowType", event.target.value)}
+                  placeholder="Skill Assessment"
                 />
-                <div className="flex justify-between text-[11px] text-[#9a9a9a]">
-                  <span>This message will be displayed before verification starts.</span>
-                  <span>{form.startMessage.length}/400</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-[13px] text-[#6a6a6a]">Completion Message</Label>
-                <Textarea
-                  className="min-h-28 resize-none"
-                  maxLength={400}
-                  value={form.completionMessage}
-                  placeholder="Enter the message shown after completion"
-                  onChange={(event) => updateForm("completionMessage", event.target.value)}
-                />
-                <div className="flex justify-between text-[11px] text-[#9a9a9a]">
-                  <span>This message will be displayed once verification is complete.</span>
-                  <span>{form.completionMessage.length}/400</span>
-                </div>
+                <p className="text-[12px] text-[#8a8a8a]">More types coming soon.</p>
               </div>
             </div>
           ) : (
             <div className="space-y-5 px-5 py-4">
               <div>
-                <h2 className="text-[13px] font-semibold text-[#1f1f1f]">Select Skills</h2>
+                <h2 className="text-[13px] font-semibold text-[#1f1f1f]">Add Job Description & skills <span className="text-[#ff5723]">*</span></h2>
                 <p className="mt-1 text-[12px] leading-5 text-[#7a7a7a]">
-                  You can add up to five skills for verification in this workflow.
+                  You can add up to five skills and paste the JD. We will create questions that match both the skills and role requirements.
                 </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[13px] text-[#6a6a6a]">Job Description <span className="text-[#ff5723]">*</span></Label>
+                <Textarea
+                  className="min-h-32 resize-none"
+                  maxLength={1500}
+                  value={form.jobDescription ?? ""}
+                  placeholder="Paste the Job Description for the particular job role."
+                  onChange={(event) => updateForm("jobDescription", event.target.value)}
+                />
+                <div className="text-right text-[11px] text-[#9a9a9a]">{(form.jobDescription ?? "").length}/1500</div>
+              </div>
+              <div>
+                <Label className="text-[13px] text-[#6a6a6a]">Skill <span className="text-[#ff5723]">*</span></Label>
                 <Button
-                  className="mt-3 h-10 gap-2 bg-[#ff5723] text-white hover:bg-[#f04d1d]"
+                  className="mt-2 h-10 gap-2 bg-[#ff5723] text-white hover:bg-[#f04d1d]"
                   onClick={() => setSkillPickerOpen(true)}
                 >
                   <Plus className="h-4 w-4" />
                   Add skills
                 </Button>
                 <p className="mt-2 text-[11px] text-[#9a9a9a]">
-                  {form.skillIds.length} of 5 skills selected.
+                  {form.skillIds.length} of 2 skills selected.
                 </p>
               </div>
-
               {selectedSkills.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {selectedSkills.map((skill) => (
                     <button
                       key={skill.skillId}
                       type="button"
-                      className="rounded-md bg-neutral-100 px-2 py-1 text-[12px] text-[#4a4a4a]"
+                      className="inline-flex items-center gap-2 rounded-md bg-neutral-100 px-2 py-1 text-[12px] text-[#4a4a4a]"
                       onClick={() => toggleSkill(skill)}
                     >
-                      {skill.name}
+                      <span>{skill.name}</span>
+                      <span className="text-[#8a8a8a]">x</span>
                     </button>
                   ))}
                 </div>
@@ -575,12 +610,36 @@ export default function WorkflowPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
+        <DialogContent className="max-w-[560px] p-0" showCloseButton>
+          <div className="grid place-items-center px-8 py-12 text-center">
+            <div className="grid h-20 w-20 place-items-center rounded-full bg-green-100">
+              <div className="grid h-14 w-14 place-items-center rounded-full bg-green-500 text-3xl font-bold text-white">
+                ✓
+              </div>
+            </div>
+            <h2 className="mt-5 text-[16px] font-semibold text-[#1f1f1f]">Workflow Created Successfully</h2>
+            <p className="mt-2 text-[13px] text-[#8a8a8a]">
+              Your workflow is ready. Add candidates and send your verification.
+            </p>
+          </div>
+          <DialogFooter className="border-t border-neutral-200 px-5 py-4">
+            <Button variant="outline" onClick={() => setSuccessOpen(false)}>
+              Back to Dashboard
+            </Button>
+            <Button className="bg-[#ff5723] text-white hover:bg-[#f04d1d]" onClick={() => setSuccessOpen(false)}>
+              Add Candidates
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={skillPickerOpen} onOpenChange={setSkillPickerOpen}>
         <DialogContent className="max-w-[520px] p-0" showCloseButton>
           <DialogHeader className="border-b border-neutral-200 px-5 py-4">
             <DialogTitle className="text-[16px] font-semibold">Add skills</DialogTitle>
             <p className="text-[12px] text-[#7a7a7a]">
-              Search and select up to five skills for this workflow.
+              Search and select up to two skills for this workflow.
             </p>
           </DialogHeader>
 
@@ -633,7 +692,7 @@ export default function WorkflowPage() {
             </div>
 
             <div className="flex items-center justify-between text-[12px] text-[#8a8a8a]">
-              <span>{form.skillIds.length} of 5 selected</span>
+              <span>{form.skillIds.length} of 2 selected</span>
               <Button
                 className="bg-[#ff5723] text-white hover:bg-[#f04d1d]"
                 onClick={() => setSkillPickerOpen(false)}
@@ -642,6 +701,180 @@ export default function WorkflowPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
+        <DialogContent className="flex max-h-[88vh] max-w-[570px] flex-col overflow-hidden p-0" showCloseButton>
+          <DialogHeader className="shrink-0 border-b border-neutral-200 px-6 py-5">
+            <DialogTitle className="text-[16px] font-semibold">
+              {requestWorkflow?.name ?? "Generate Request"}
+            </DialogTitle>
+            <div className="space-y-2">
+              <p className="text-[12px] text-[#8a8a8a]">
+                Step {requestStep} of 2 - {requestStep === 1 ? "Assign Candidates" : "Verification Delivery Settings"}
+              </p>
+              <div className="flex gap-1">
+                <span className="h-1 w-12 rounded-full bg-[#ff5723]" />
+                <span className={cn("h-1 w-12 rounded-full", requestStep === 2 ? "bg-[#ff5723]" : "bg-neutral-200")} />
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto">
+          {requestStep === 1 ? (
+            <div className="space-y-5 px-6 py-5">
+              <div className="inline-flex rounded-lg bg-neutral-100 p-1">
+                <button
+                  className={cn("rounded-md px-10 py-2 text-[13px]", requestTab === "bulk" && "bg-white shadow-sm")}
+                  onClick={() => setRequestTab("bulk")}
+                >
+                  Bulk Upload
+                </button>
+                <button
+                  className={cn("rounded-md px-10 py-2 text-[13px]", requestTab === "manual" && "bg-white shadow-sm")}
+                  onClick={() => setRequestTab("manual")}
+                >
+                  Manual Entry
+                </button>
+              </div>
+
+              {requestTab === "manual" ? (
+                <div className="space-y-4">
+                  <h3 className="text-[15px] font-semibold">Add Candidate Manually</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Full Name <span className="text-[#ff5723]">*</span></Label>
+                      <Input value={candidateName} placeholder="eg: Jhon" onChange={(e) => setCandidateName(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Phone Number <span className="text-[#ff5723]">*</span></Label>
+                      <div className="flex overflow-hidden rounded-lg border">
+                        <span className="grid w-14 place-items-center bg-neutral-100 text-[13px] text-[#7a7a7a]">+91</span>
+                        <Input className="border-0" value={candidatePhone} placeholder="6380099916" onChange={(e) => setCandidatePhone(e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Role being verified</Label>
+                    <Input value={candidateRole} placeholder="Picker and Packer" onChange={(e) => setCandidateRole(e.target.value)} />
+                  </div>
+                  <p className="text-[12px] text-[#8a8a8a]">
+                    The AI will reach out to this candidate using the method set in your workflow.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-[15px] font-semibold">Upload Candidates via CSV</h3>
+                    <p className="text-[13px] text-[#7a7a7a]">
+                      Upload a CSV file with candidate details (Name, Phone Number) to request multiple candidates at once.
+                    </p>
+                  </div>
+                  {csvCandidates.length === 0 ? (
+                    <div className="grid min-h-56 place-items-center rounded-xl border border-dashed border-neutral-300">
+                      <div className="text-center">
+                        <Upload className="mx-auto h-8 w-8 text-[#ff5723]" />
+                        <p className="mt-4 text-[15px] font-medium">Upload a CSV file with your candidate list (only CSV)</p>
+                        <p className="mt-1 text-[12px] text-[#9a9a9a]">Candidate Name, Mobile Number, Role</p>
+                        <label className="mt-4 inline-flex cursor-pointer rounded-md border px-3 py-2 text-[12px] shadow-sm">
+                          Upload files
+                          <input
+                            type="file"
+                            accept=".csv,text/csv"
+                            className="hidden"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              if (file) void parseCsv(file);
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-[18px] font-semibold">Picker and Packer - Chennai Batch</h3>
+                        <p className="text-[13px] text-[#9a9a9a]">Total: {csvCandidates.length} candidates</p>
+                      </div>
+                      <div className="overflow-hidden rounded-md border">
+                        <div className="grid grid-cols-2 border-b px-4 py-3 text-[13px] text-[#6f7582]">
+                          <span>Candidate Name</span>
+                          <span>Candidate Mobile Number</span>
+                        </div>
+                        {csvCandidates.slice(0, 5).map((candidate, index) => (
+                          <div key={`${candidate.phoneNumber}-${index}`} className="grid grid-cols-2 border-b px-4 py-4 text-[14px] last:border-b-0">
+                            <span>{candidate.name}</span>
+                            <span>{candidate.phoneNumber}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="mt-3 text-[12px] text-[#7a7a7a]">“0” In-list Duplicates Removed</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4 px-6 py-5">
+              <div>
+                <h3 className="text-[14px] font-semibold">Configure Verification Delivery</h3>
+                <p className="text-[12px] text-[#7a7a7a]">
+                  Set how verification links should be delivered and customize the messages shown to candidates.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Send Verification Via <span className="text-[#ff5723]">*</span></Label>
+                  <Input className="mt-2" value="Whats App" readOnly />
+                </div>
+                <div>
+                  <Label>Verification Link Expiry <span className="text-[#ff5723]">*</span></Label>
+                  <Input className="mt-2" value="7 Days" readOnly />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-[14px] font-semibold">Verification Start & Completion Message</h3>
+                <p className="text-[12px] text-[#7a7a7a]">Candidates will see this message before starting and once they’ve finished verification.</p>
+              </div>
+              <Textarea className="min-h-28 resize-none" value="Record Technology Labs has sent the link for your skill verification process. Kindly click on the link below and proceed with the verification to showcase and prove your skills successfully." readOnly />
+              <Textarea className="min-h-28 resize-none" value="You're all set! We'll review your information and reach out shortly." readOnly />
+            </div>
+          )}
+          </div>
+
+          <DialogFooter className="shrink-0 border-t border-neutral-200 bg-white px-5 py-4">
+            <Button variant="outline" onClick={() => requestStep === 1 ? setRequestOpen(false) : setRequestStep(1)}>
+              {requestStep === 1 ? "Cancel" : "Back"}
+            </Button>
+            {requestStep === 1 ? (
+              <Button className="bg-[#ff5723] text-white hover:bg-[#f04d1d]" onClick={() => setRequestStep(2)}>
+                {requestTab === "manual" ? "Add Candidate" : "Continue"}
+              </Button>
+            ) : (
+              <Button className="bg-[#ff5723] text-white hover:bg-[#f04d1d]" disabled={sendingRequest} onClick={sendRequest}>
+                {sendingRequest ? "Sending..." : "Send Request"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={requestSuccessOpen} onOpenChange={setRequestSuccessOpen}>
+        <DialogContent className="max-w-[520px] p-0" showCloseButton>
+          <div className="grid place-items-center px-8 py-12 text-center">
+            <div className="grid h-20 w-20 place-items-center rounded-full bg-green-100">
+              <div className="grid h-14 w-14 place-items-center rounded-full bg-green-500 text-3xl font-bold text-white">✓</div>
+            </div>
+            <h2 className="mt-5 text-[16px] font-semibold">Verification Request Sent Successfully</h2>
+            <p className="mt-2 text-[13px] text-[#8a8a8a]">
+              Your workflow has been successfully configured and verification requests have been sent to the selected candidates.
+            </p>
+          </div>
+          <DialogFooter className="border-t border-neutral-200 px-5 py-4">
+            <Button variant="outline" onClick={() => setRequestSuccessOpen(false)}>Back to Dashboard</Button>
+            <Button className="bg-emerald-950 text-white hover:bg-emerald-900" onClick={() => setRequestSuccessOpen(false)}>View Requests</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

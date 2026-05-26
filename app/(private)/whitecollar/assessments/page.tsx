@@ -158,7 +158,7 @@ export default function AssessmentsPage() {
   // Modal
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm]           = useState<CreateAssessmentForm>(emptyForm());
-  const [errors, setErrors]       = useState<Partial<CreateAssessmentForm>>({});
+  const [errors, setErrors]       = useState<Partial<Record<keyof CreateAssessmentForm, string>>>({});
   const [saving, setSaving]       = useState(false);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -184,7 +184,7 @@ export default function AssessmentsPage() {
   };
 
   const validate = (): boolean => {
-    const e: Partial<CreateAssessmentForm> = {};
+    const e: Partial<Record<keyof CreateAssessmentForm, string>> = {};
     if (!form.name.trim())          e.name           = "Assessment name is required";
     if (!form.assessmentType)       e.assessmentType  = "Please select a type";
     setErrors(e);

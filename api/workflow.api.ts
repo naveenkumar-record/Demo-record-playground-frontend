@@ -14,6 +14,7 @@ export type WorkflowItem = {
   verifiedCount: number;
   completionPercent: number;
   workflowType: string;
+  jobDescription?: string;
   skillIds: string[];
   verificationMethod: "text" | "voice" | "video";
   createdAt: string;
@@ -41,6 +42,7 @@ export type CreateWorkflowPayload = {
   orgId: string;
   name: string;
   workflowType: string;
+  jobDescription?: string;
   startMessage: string;
   completionMessage: string;
   skillIds: string[];
@@ -94,5 +96,25 @@ export const createWorkflow = (
   postRequest<{ workflow: WorkflowItem }, CreateWorkflowPayload>(
     apiPathConstants.workflows.base,
     payload,
+    { accessToken },
+  );
+
+export type WorkflowCandidatePayload = {
+  name: string;
+  phoneNumber: string;
+  role?: string;
+};
+
+export const createWorkflowCandidates = (
+  workflowId: string,
+  candidates: WorkflowCandidatePayload[],
+  accessToken: string,
+) =>
+  postRequest<
+    { candidates: unknown[] },
+    { candidates: WorkflowCandidatePayload[] }
+  >(
+    `${apiPathConstants.workflows.base}/${workflowId}/candidates`,
+    { candidates },
     { accessToken },
   );
