@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Sparkles, AlignLeft, Search, Plus, X, Loader2, Check } from "lucide-react";
+import { useRouter }  from "next/navigation";
+import {
+  Sparkles, AlignLeft, Search, Plus, X, Loader2, Check,
+} from "lucide-react";
 import { Button }   from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -28,15 +31,14 @@ function getAccessToken() {
   return localStorage.getItem("auth_access_token") ?? "";
 }
 
-// ── Options ───────────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
-const ROLE_TYPES         = ["Full-time", "Part-time", "Contract", "Internship", "Freelance"];
-const EXPERIENCE_RANGES  = ["0–1 years", "1–3 years", "3–5 years", "5–8 years", "8+ years"];
-const QUESTION_SET_TYPES = ["Multiple Choice", "Short Answer", "Mixed", "Coding Challenge", "Essay"];
-const DIFFICULTIES       = ["Easy", "Medium", "Hard", "Expert"];
-const CUSTOM_TYPES       = ["Technical Screen", "Behavioral Interview", "Cognitive Test", "Domain Knowledge", "Custom"];
+const ROLE_TYPES        = ["Full-time", "Part-time", "Contract", "Internship", "Freelance"];
+const EXPERIENCE_RANGES = ["0–1 years", "1–3 years", "3–5 years", "5–8 years", "8+ years"];
+const QUESTION_SET_TYPES = ["Same For All", "Different For All"];
+const DIFFICULTIES      = ["Easy", "Medium", "Hard", "Expert"];
 
-// ── Public result type ────────────────────────────────────────────────────────
+// ── Public types ──────────────────────────────────────────────────────────────
 
 export type CreateAssessmentResult = {
   name:            string;
@@ -59,8 +61,45 @@ type Props = {
   open:     boolean;
   saving:   boolean;
   onClose:  () => void;
-  onCreate: (data: CreateAssessmentResult) => Promise<void>;
+  /** Returns the created assessmentId so the modal can navigate for custom flow */
+  onCreate: (data: CreateAssessmentResult) => Promise<string | undefined>;
 };
+
+type FlowStep = "options" | "ai-1" | "ai-2" | "custom-1" | "success";
+
+// ── Shared form types ─────────────────────────────────────────────────────────
+
+type AiStep1Form = {
+  name:            string;
+  jobTitle:        string;
+  jobDescription:  string;
+  roleType:        string;
+  experienceRange: string;
+  selectedSkills:  WorkflowSkill[];
+};
+type AiStep1Errors = Partial<Record<"name" | "jobTitle", string>>;
+
+type AiStep2Form = {
+  questionSetType: string;
+  totalMarks:      string;
+  duration:        string;
+  passMarks:       string;
+  difficulty:      string;
+};
+type AiStep2Errors = Partial<Record<keyof AiStep2Form, string>>;
+
+type CustomStep1Form = {
+  name:            string;
+  jobTitle:        string;
+  roleType:        string;
+  experienceRange: string;
+  selectedSkills:  WorkflowSkill[];
+  totalMarks:      string;
+  duration:        string;
+  passMarks:       string;
+  difficulty:      string;
+};
+type CustomStep1Errors = Partial<Record<"name", string>>;
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
 
@@ -83,29 +122,23 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
 // ── Skill Picker Dialog ───────────────────────────────────────────────────────
 
 function SkillPickerDialog({
-  open,
-  selectedSkills,
-  onClose,
-  onToggle,
+  open, selectedSkills, onClose, onToggle,
 }: {
   open:           boolean;
   selectedSkills: WorkflowSkill[];
   onClose:        () => void;
   onToggle:       (skill: WorkflowSkill) => void;
 }) {
-  const [query, setQuery]         = useState("");
-  const [results, setResults]     = useState<WorkflowSkill[]>([]);
+  const [query,     setQuery]     = useState("");
+  const [results,   setResults]   = useState<WorkflowSkill[]>([]);
   const [searching, setSearching] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    if (!open) { setQuery(""); setResults([]); }
-  }, [open]);
+  useEffect(() => { if (!open) { setQuery(""); setResults([]); } }, [open]);
 
   useEffect(() => {
     const trimmed = query.trim();
     if (trimmed.length < 2) { setResults([]); return; }
-
     abortRef.current?.abort();
     abortRef.current = new AbortController();
     const timer = window.setTimeout(() => {
@@ -118,39 +151,28 @@ function SkillPickerDialog({
         })
         .finally(() => setSearching(false));
     }, 250);
-
     return () => { window.clearTimeout(timer); abortRef.current?.abort(); };
   }, [query]);
 
-  const isSelected = (skill: WorkflowSkill) =>
-    selectedSkills.some((s) => s.skillId === skill.skillId);
+  const isSelected = (s: WorkflowSkill) => selectedSkills.some((x) => x.skillId === s.skillId);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-[500px] p-0" showCloseButton>
         <DialogHeader className="border-b border-neutral-200 px-5 py-4">
           <DialogTitle className="text-[16px] font-semibold">Add Skills</DialogTitle>
-          <p className="text-[12px] text-[#7a7a7a]">
-            Search and select up to 5 skills for this assessment.
-          </p>
+          <p className="text-[12px] text-[#7a7a7a]">Search and select up to 5 skills.</p>
         </DialogHeader>
-
         <div className="space-y-4 px-5 py-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-            <Input
-              autoFocus
-              placeholder="Search skills…"
-              className="pl-9 text-[13px]"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+            <Input autoFocus placeholder="Search skills…" className="pl-9 text-[13px]"
+              value={query} onChange={(e) => setQuery(e.target.value)} />
           </div>
-
           <div className="min-h-44 overflow-hidden rounded-md border border-neutral-200">
             {query.trim().length < 2 ? (
               <p className="px-4 py-8 text-center text-[13px] text-[#8a8a8a]">
-                Type at least 2 characters to search skills.
+                Type at least 2 characters to search.
               </p>
             ) : searching ? (
               <p className="px-4 py-8 text-center text-[13px] text-[#8a8a8a]">Searching…</p>
@@ -159,32 +181,22 @@ function SkillPickerDialog({
             ) : (
               <div className="max-h-64 overflow-y-auto">
                 {results.map((skill) => (
-                  <label
-                    key={skill.skillId}
-                    className="flex cursor-pointer items-center gap-3 border-b border-neutral-100 px-4 py-3 last:border-b-0 hover:bg-neutral-50"
-                  >
-                    <Checkbox
-                      checked={isSelected(skill)}
-                      onCheckedChange={() => {
-                        if (!isSelected(skill) && selectedSkills.length >= 5) return;
-                        onToggle(skill);
-                      }}
-                    />
-                    <span className="flex-1 text-[13px] font-medium text-[#1f1f1f]">
-                      {skill.name}
-                    </span>
+                  <label key={skill.skillId}
+                    className="flex cursor-pointer items-center gap-3 border-b border-neutral-100 px-4 py-3 last:border-b-0 hover:bg-neutral-50">
+                    <Checkbox checked={isSelected(skill)} onCheckedChange={() => {
+                      if (!isSelected(skill) && selectedSkills.length >= 5) return;
+                      onToggle(skill);
+                    }} />
+                    <span className="flex-1 text-[13px] font-medium text-[#1f1f1f]">{skill.name}</span>
                     <span className="text-[11px] text-[#9a9a9a]">{skill.skillId}</span>
                   </label>
                 ))}
               </div>
             )}
           </div>
-
           <div className="flex items-center justify-between text-[12px] text-[#8a8a8a]">
             <span>{selectedSkills.length} of 5 selected</span>
-            <Button className="bg-[#ff5723] text-white hover:bg-[#f04d1d]" onClick={onClose}>
-              Done
-            </Button>
+            <Button className="bg-[#ff5723] text-white hover:bg-[#f04d1d]" onClick={onClose}>Done</Button>
           </div>
         </div>
       </DialogContent>
@@ -218,200 +230,137 @@ function SuccessScreen({ onClose, onAssign }: { onClose: () => void; onAssign: (
   );
 }
 
-// ── Step 0 — Assessment Options ───────────────────────────────────────────────
+// ── Assessment Options ────────────────────────────────────────────────────────
 
 function AssessmentOptionsStep({
-  selected,
-  onSelect,
-  onCancel,
-  onContinue,
+  selected, onSelect, onCancel, onContinue,
 }: {
-  selected:   "ai" | "custom";
-  onSelect:   (m: "ai" | "custom") => void;
-  onCancel:   () => void;
-  onContinue: () => void;
+  selected: "ai" | "custom"; onSelect: (m: "ai" | "custom") => void;
+  onCancel: () => void; onContinue: () => void;
 }) {
   return (
     <>
       <DialogHeader className="border-b border-neutral-200 px-6 py-4">
         <DialogTitle className="text-[16px] font-semibold">Assessment options</DialogTitle>
         <p className="text-[12px] text-[#8a8a8a]">
-          Select how you'd like to create your assessment, automatically generated or fully customized.
+          Select how you&apos;d like to create your assessment.
         </p>
       </DialogHeader>
-
       <div className="space-y-3 px-6 py-5">
-        {/* AI Powered */}
-        <button
-          type="button"
-          onClick={() => onSelect("ai")}
-          className={cn(
-            "flex w-full items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
-            selected === "ai"
-              ? "border-[#ff5723] bg-orange-50"
-              : "border-neutral-200 bg-white hover:border-neutral-300",
-          )}
-        >
-          <span
+        {[
+          {
+            key: "ai" as const,
+            icon: <Sparkles className={cn("h-5 w-5", selected === "ai" ? "text-[#ff5723]" : "text-neutral-400")} />,
+            title: "AI Powered Assessment",
+            desc: "Enter job details, role, experience, and skills. The system generates tailored Q&A sets, same for all or unique per candidate.",
+          },
+          {
+            key: "custom" as const,
+            icon: (
+              <svg className={cn("h-5 w-5", selected === "custom" ? "text-[#ff5723]" : "text-neutral-400")}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            ),
+            title: "Customized Assessment",
+            desc: "Manually create your own questions and scenarios to match specific job needs or unique evaluation criteria.",
+          },
+        ].map(({ key, icon, title, desc }) => (
+          <button key={key} type="button" onClick={() => onSelect(key)}
             className={cn(
-              "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-              selected === "ai" ? "bg-orange-100" : "bg-neutral-100",
-            )}
-          >
-            <Sparkles
-              className={cn("h-5 w-5", selected === "ai" ? "text-[#ff5723]" : "text-neutral-400")}
-            />
-          </span>
-          <div>
-            <p
-              className={cn(
-                "text-[14px] font-semibold",
-                selected === "ai" ? "text-[#ff5723]" : "text-[#1f1f1f]",
-              )}
-            >
-              AI Powered Assessment
-            </p>
-            <p className="mt-1 text-[12px] leading-relaxed text-[#8a8a8a]">
-              Enter job details, role, experience, and skills. The system generates tailored Q&A sets,
-              same for all or unique per candidate.
-            </p>
-          </div>
-        </button>
-
-        {/* Customized */}
-        <button
-          type="button"
-          onClick={() => onSelect("custom")}
-          className={cn(
-            "flex w-full items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
-            selected === "custom"
-              ? "border-[#ff5723] bg-orange-50"
-              : "border-neutral-200 bg-white hover:border-neutral-300",
-          )}
-        >
-          <span
-            className={cn(
-              "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-              selected === "custom" ? "bg-orange-100" : "bg-neutral-100",
-            )}
-          >
-            {/* Document icon */}
-            <svg
-              className={cn("h-5 w-5", selected === "custom" ? "text-[#ff5723]" : "text-neutral-400")}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.8}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-          </span>
-          <div>
-            <p
-              className={cn(
-                "text-[14px] font-semibold",
-                selected === "custom" ? "text-[#ff5723]" : "text-[#1f1f1f]",
-              )}
-            >
-              Customized Assessment
-            </p>
-            <p className="mt-1 text-[12px] leading-relaxed text-[#8a8a8a]">
-              Manually create your own questions and scenarios to match specific job needs or unique
-              evaluation criteria.
-            </p>
-          </div>
-        </button>
+              "flex w-full items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
+              selected === key ? "border-[#ff5723] bg-orange-50" : "border-neutral-200 bg-white hover:border-neutral-300",
+            )}>
+            <span className={cn("mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+              selected === key ? "bg-orange-100" : "bg-neutral-100")}>
+              {icon}
+            </span>
+            <div>
+              <p className={cn("text-[14px] font-semibold", selected === key ? "text-[#ff5723]" : "text-[#1f1f1f]")}>
+                {title}
+              </p>
+              <p className="mt-1 text-[12px] leading-relaxed text-[#8a8a8a]">{desc}</p>
+            </div>
+          </button>
+        ))}
       </div>
-
       <div className="flex items-center justify-between border-t border-neutral-200 px-6 py-4">
         <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button className="bg-[#ff5723] text-white hover:bg-[#f04d1d]" onClick={onContinue}>
-          Continue
-        </Button>
+        <Button className="bg-[#ff5723] text-white hover:bg-[#f04d1d]" onClick={onContinue}>Continue</Button>
       </div>
     </>
   );
 }
 
-// ── Step 1 — AI: Assessment Details ──────────────────────────────────────────
+// ── Shared skill chips ────────────────────────────────────────────────────────
 
-type AiStep1Form = {
-  name:            string;
-  jobTitle:        string;
-  jobDescription:  string;
-  roleType:        string;
-  experienceRange: string;
-  selectedSkills:  WorkflowSkill[];
-};
-type AiStep1Errors = Partial<Record<"name" | "jobTitle", string>>;
+function SkillChips({ skills, onRemove, onAdd }: {
+  skills: WorkflowSkill[]; onRemove: (id: string) => void; onAdd: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-[13px] font-medium text-[#3a3a3a]">Skills</Label>
+      {skills.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {skills.map((s) => (
+            <span key={s.skillId}
+              className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-[12px] font-medium text-[#3a3a3a]">
+              {s.name}
+              <button type="button" onClick={() => onRemove(s.skillId)}
+                className="ml-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-neutral-400 hover:text-neutral-700">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <Button type="button" size="sm" disabled={skills.length >= 5} onClick={onAdd}
+        className="h-9 gap-1.5 rounded-full bg-[#ff5723] px-4 text-[13px] font-semibold text-white hover:bg-[#f04d1d] disabled:opacity-50">
+        <Plus className="h-3.5 w-3.5" />
+        Add skills
+      </Button>
+      <p className="text-[11px] text-[#9a9a9a]">You can add up to 5 skills per assessment.</p>
+    </div>
+  );
+}
 
-function AiStep1Content({
-  form,
-  errors,
-  onOpenSkillPicker,
-  onChange,
-  onRemoveSkill,
-}: {
-  form:             AiStep1Form;
-  errors:           AiStep1Errors;
-  onOpenSkillPicker: () => void;
-  onChange:         <K extends keyof AiStep1Form>(k: K, v: AiStep1Form[K]) => void;
-  onRemoveSkill:    (id: string) => void;
+// ── AI Step 1 ─────────────────────────────────────────────────────────────────
+
+function AiStep1Content({ form, errors, onOpenSkillPicker, onChange, onRemoveSkill }: {
+  form: AiStep1Form; errors: AiStep1Errors; onOpenSkillPicker: () => void;
+  onChange: <K extends keyof AiStep1Form>(k: K, v: AiStep1Form[K]) => void;
+  onRemoveSkill: (id: string) => void;
 }) {
   return (
     <div className="space-y-5 px-6 pb-2">
-      {/* Assessment Name + Job Title */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label className="text-[13px] font-medium text-[#3a3a3a]">
-            Assessment Name <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            placeholder="eg: Frontend Developer Assess…"
-            value={form.name}
+          <Label className="text-[13px] font-medium text-[#3a3a3a]">Assessment Name <span className="text-red-500">*</span></Label>
+          <Input placeholder="eg: Frontend Developer Assess…" value={form.name}
             onChange={(e) => onChange("name", e.target.value)}
-            className={cn("text-[13px]", errors.name && "border-red-400 focus-visible:border-red-400")}
-          />
+            className={cn("text-[13px]", errors.name && "border-red-400 focus-visible:border-red-400")} />
           {errors.name && <p className="text-[11px] text-red-500">{errors.name}</p>}
         </div>
-
         <div className="space-y-1.5">
-          <Label className="text-[13px] font-medium text-[#3a3a3a]">
-            Job Title <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            placeholder="eg: Frontend Developer"
-            value={form.jobTitle}
+          <Label className="text-[13px] font-medium text-[#3a3a3a]">Job Title <span className="text-red-500">*</span></Label>
+          <Input placeholder="eg: Frontend Developer" value={form.jobTitle}
             onChange={(e) => onChange("jobTitle", e.target.value)}
-            className={cn("text-[13px]", errors.jobTitle && "border-red-400 focus-visible:border-red-400")}
-          />
+            className={cn("text-[13px]", errors.jobTitle && "border-red-400 focus-visible:border-red-400")} />
           {errors.jobTitle && <p className="text-[11px] text-red-500">{errors.jobTitle}</p>}
         </div>
       </div>
-
-      {/* Job Description */}
       <div className="space-y-1.5">
         <Label className="text-[13px] font-medium text-[#3a3a3a]">Job Description</Label>
         <div className="relative">
           <AlignLeft className="absolute left-3 top-3 h-4 w-4 text-neutral-400" />
-          <Textarea
-            placeholder="eg: Hiring candidates with strong role fundamentals practical thinking and execution ability."
+          <Textarea placeholder="eg: Hiring candidates with strong role fundamentals…"
             className="min-h-[120px] resize-none pl-9 text-[13px]"
-            maxLength={1500}
-            value={form.jobDescription}
-            onChange={(e) => onChange("jobDescription", e.target.value)}
-          />
+            maxLength={1500} value={form.jobDescription}
+            onChange={(e) => onChange("jobDescription", e.target.value)} />
         </div>
-        <div className="flex justify-end text-[11px] text-[#9a9a9a]">
-          {form.jobDescription.length}/1500
-        </div>
+        <div className="flex justify-end text-[11px] text-[#9a9a9a]">{form.jobDescription.length}/1500</div>
       </div>
-
-      {/* Role Type + Experience Range */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-[#3a3a3a]">Role Type</Label>
@@ -421,14 +370,11 @@ function AiStep1Content({
                 <SelectValue placeholder="Select role type" />
               </SelectTrigger>
               <SelectContent position="popper" className="w-[--radix-select-trigger-width]">
-                {ROLE_TYPES.map((r) => (
-                  <SelectItem key={r} value={r} className="text-[13px]">{r}</SelectItem>
-                ))}
+                {ROLE_TYPES.map((r) => <SelectItem key={r} value={r} className="text-[13px]">{r}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
         </div>
-
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-[#3a3a3a]">Experience Range</Label>
           <div className="w-full">
@@ -437,129 +383,55 @@ function AiStep1Content({
                 <SelectValue placeholder="Select experience range" />
               </SelectTrigger>
               <SelectContent position="popper" className="w-[--radix-select-trigger-width]">
-                {EXPERIENCE_RANGES.map((r) => (
-                  <SelectItem key={r} value={r} className="text-[13px]">{r}</SelectItem>
-                ))}
+                {EXPERIENCE_RANGES.map((r) => <SelectItem key={r} value={r} className="text-[13px]">{r}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
         </div>
       </div>
-
-      {/* Skills */}
-      <div className="space-y-2">
-        <Label className="text-[13px] font-medium text-[#3a3a3a]">Skills</Label>
-
-        {form.selectedSkills.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {form.selectedSkills.map((skill) => (
-              <span
-                key={skill.skillId}
-                className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-[12px] font-medium text-[#3a3a3a]"
-              >
-                {skill.name}
-                <button
-                  type="button"
-                  onClick={() => onRemoveSkill(skill.skillId)}
-                  className="ml-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-neutral-400 hover:text-neutral-700"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        <Button
-          type="button"
-          size="sm"
-          disabled={form.selectedSkills.length >= 5}
-          onClick={onOpenSkillPicker}
-          className="h-9 gap-1.5 rounded-full bg-[#ff5723] px-4 text-[13px] font-semibold text-white hover:bg-[#f04d1d] disabled:opacity-50"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add skills
-        </Button>
-
-        <p className="text-[11px] text-[#9a9a9a]">You can add up to 5 skills per workflow.</p>
-      </div>
+      <SkillChips skills={form.selectedSkills} onRemove={onRemoveSkill} onAdd={onOpenSkillPicker} />
     </div>
   );
 }
 
-// ── Step 2 — AI: Question Preferences ────────────────────────────────────────
+// ── AI Step 2 ─────────────────────────────────────────────────────────────────
 
-type AiStep2Form = {
-  questionSetType: string;
-  totalMarks:      string;
-  duration:        string;
-  passMarks:       string;
-  difficulty:      string;
-};
-type AiStep2Errors = Partial<Record<keyof AiStep2Form, string>>;
-
-function AiStep2Content({
-  form,
-  errors,
-  onChange,
-}: {
-  form:    AiStep2Form;
-  errors:  AiStep2Errors;
+function AiStep2Content({ form, errors, onChange }: {
+  form: AiStep2Form; errors: AiStep2Errors;
   onChange: <K extends keyof AiStep2Form>(k: K, v: AiStep2Form[K]) => void;
 }) {
   return (
     <div className="space-y-5 px-6 pb-2">
-      {/* Question Set Type */}
       <div className="space-y-1.5">
-        <Label className="text-[13px] font-medium text-[#3a3a3a]">
-          Question Set Type <span className="text-red-500">*</span>
-        </Label>
+        <Label className="text-[13px] font-medium text-[#3a3a3a]">Question Set Type <span className="text-red-500">*</span></Label>
         <Select value={form.questionSetType} onValueChange={(v) => onChange("questionSetType", v)}>
-          <SelectTrigger className={cn("h-10 w-full rounded-xl border-0 bg-neutral-100 text-[13px] text-[#9a9a9a] shadow-none focus:ring-0 focus:ring-offset-0 data-[placeholder]:text-[#9a9a9a]", errors.questionSetType && "ring-1 ring-red-400")}>
+          <SelectTrigger className={cn("h-10 w-full rounded-xl border-0 bg-neutral-100 text-[13px] text-[#9a9a9a] shadow-none focus:ring-0 focus:ring-offset-0 data-[placeholder]:text-[#9a9a9a]",
+            errors.questionSetType && "ring-1 ring-red-400")}>
             <SelectValue placeholder="Select Question Set Type" />
           </SelectTrigger>
-          <SelectContent>
-            {QUESTION_SET_TYPES.map((t) => (
-              <SelectItem key={t} value={t} className="text-[13px]">{t}</SelectItem>
-            ))}
+          <SelectContent position="popper" className="w-[--radix-select-trigger-width]">
+            {QUESTION_SET_TYPES.map((t) => <SelectItem key={t} value={t} className="text-[13px]">{t}</SelectItem>)}
           </SelectContent>
         </Select>
         {errors.questionSetType && <p className="text-[11px] text-red-500">{errors.questionSetType}</p>}
       </div>
-
-      {/* Total Marks + Duration */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-[#3a3a3a]">Total Marks</Label>
-          <Input
-            type="number"
-            placeholder="eg: 100"
-            value={form.totalMarks}
-            className="text-[13px]"
-            onChange={(e) => onChange("totalMarks", e.target.value)}
-          />
+          <Input type="number" placeholder="eg: 100" value={form.totalMarks}
+            className="text-[13px]" onChange={(e) => onChange("totalMarks", e.target.value)} />
         </div>
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-[#3a3a3a]">Duration</Label>
-          <Input
-            placeholder="eg: 75 mins"
-            value={form.duration}
-            className="text-[13px]"
-            onChange={(e) => onChange("duration", e.target.value)}
-          />
+          <Input placeholder="eg: 75 mins" value={form.duration}
+            className="text-[13px]" onChange={(e) => onChange("duration", e.target.value)} />
         </div>
       </div>
-
-      {/* Pass Marks + Difficulty */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-[#3a3a3a]">Pass Marks</Label>
-          <Input
-            placeholder="eg: 65/100"
-            value={form.passMarks}
-            className="text-[13px]"
-            onChange={(e) => onChange("passMarks", e.target.value)}
-          />
+          <Input placeholder="eg: 65/100" value={form.passMarks}
+            className="text-[13px]" onChange={(e) => onChange("passMarks", e.target.value)} />
         </div>
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-[#3a3a3a]">Difficulty</Label>
@@ -568,9 +440,7 @@ function AiStep2Content({
               <SelectValue placeholder="Select Difficulty level" />
             </SelectTrigger>
             <SelectContent position="popper" className="w-[--radix-select-trigger-width]">
-              {DIFFICULTIES.map((d) => (
-                <SelectItem key={d} value={d} className="text-[13px]">{d}</SelectItem>
-              ))}
+              {DIFFICULTIES.map((d) => <SelectItem key={d} value={d} className="text-[13px]">{d}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -579,66 +449,86 @@ function AiStep2Content({
   );
 }
 
-// ── Custom step ───────────────────────────────────────────────────────────────
+// ── Custom Step 1 — Assessment Details ────────────────────────────────────────
 
-type CustomForm   = { name: string; assessmentType: string; description: string };
-type CustomErrors = Partial<CustomForm>;
-
-function CustomStepContent({
-  form,
-  errors,
-  onChange,
-}: {
-  form:    CustomForm;
-  errors:  CustomErrors;
-  onChange: <K extends keyof CustomForm>(k: K, v: CustomForm[K]) => void;
+function CustomStep1Content({ form, errors, onOpenSkillPicker, onChange, onRemoveSkill }: {
+  form: CustomStep1Form; errors: CustomStep1Errors; onOpenSkillPicker: () => void;
+  onChange: <K extends keyof CustomStep1Form>(k: K, v: CustomStep1Form[K]) => void;
+  onRemoveSkill: (id: string) => void;
 }) {
   return (
     <div className="space-y-5 px-6 pb-2">
-      <div className="space-y-1.5">
-        <Label className="text-[13px] font-medium text-[#3a3a3a]">
-          Assessment Name <span className="text-red-500">*</span>
-        </Label>
-        <Input
-          placeholder="eg: Senior Software Engineer Screen"
-          value={form.name}
-          onChange={(e) => onChange("name", e.target.value)}
-          className={cn("text-[13px]", errors.name && "border-red-400 focus-visible:border-red-400")}
-        />
-        {errors.name && <p className="text-[11px] text-red-500">{errors.name}</p>}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label className="text-[13px] font-medium text-[#3a3a3a]">Assessment Name <span className="text-red-500">*</span></Label>
+          <Input placeholder="eg: Frontend Developer Assess…" value={form.name}
+            onChange={(e) => onChange("name", e.target.value)}
+            className={cn("text-[13px]", errors.name && "border-red-400 focus-visible:border-red-400")} />
+          {errors.name && <p className="text-[11px] text-red-500">{errors.name}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-[13px] font-medium text-[#3a3a3a]">Job Title</Label>
+          <Input placeholder="eg: Frontend Developer" value={form.jobTitle}
+            onChange={(e) => onChange("jobTitle", e.target.value)} className="text-[13px]" />
+        </div>
       </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-[13px] font-medium text-[#3a3a3a]">
-          Assessment Type <span className="text-red-500">*</span>
-        </Label>
-        <Select value={form.assessmentType} onValueChange={(v) => onChange("assessmentType", v)}>
-          <SelectTrigger className={cn("h-10 w-full rounded-xl border-0 bg-neutral-100 text-[13px] text-[#9a9a9a] shadow-none focus:ring-0 focus:ring-offset-0 data-[placeholder]:text-[#9a9a9a]", errors.assessmentType && "ring-1 ring-red-400 bg-red-50")}>
-            <SelectValue placeholder="Select a type" />
-          </SelectTrigger>
-          <SelectContent>
-            {CUSTOM_TYPES.map((t) => (
-              <SelectItem key={t} value={t} className="text-[13px]">{t}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {errors.assessmentType && <p className="text-[11px] text-red-500">{errors.assessmentType}</p>}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label className="text-[13px] font-medium text-[#3a3a3a]">Role Type</Label>
+          <div className="w-full">
+            <Select value={form.roleType} onValueChange={(v) => onChange("roleType", v)}>
+              <SelectTrigger className="h-10 w-full rounded-xl border-0 bg-neutral-100 text-[13px] text-[#9a9a9a] shadow-none focus:ring-0 focus:ring-offset-0 data-[placeholder]:text-[#9a9a9a]">
+                <SelectValue placeholder="Select role type" />
+              </SelectTrigger>
+              <SelectContent position="popper" className="w-[--radix-select-trigger-width]">
+                {ROLE_TYPES.map((r) => <SelectItem key={r} value={r} className="text-[13px]">{r}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-[13px] font-medium text-[#3a3a3a]">Experience Range</Label>
+          <div className="w-full">
+            <Select value={form.experienceRange} onValueChange={(v) => onChange("experienceRange", v)}>
+              <SelectTrigger className="h-10 w-full rounded-xl border-0 bg-neutral-100 text-[13px] text-[#9a9a9a] shadow-none focus:ring-0 focus:ring-offset-0 data-[placeholder]:text-[#9a9a9a]">
+                <SelectValue placeholder="Select experience range" />
+              </SelectTrigger>
+              <SelectContent position="popper" className="w-[--radix-select-trigger-width]">
+                {EXPERIENCE_RANGES.map((r) => <SelectItem key={r} value={r} className="text-[13px]">{r}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-[13px] font-medium text-[#3a3a3a]">
-          Description{" "}
-          <span className="text-[12px] font-normal text-[#9a9a9a]">(optional)</span>
-        </Label>
-        <Textarea
-          placeholder="Describe the purpose and scope of this assessment…"
-          className="min-h-[100px] resize-none text-[13px]"
-          maxLength={500}
-          value={form.description}
-          onChange={(e) => onChange("description", e.target.value)}
-        />
-        <div className="flex justify-end text-[11px] text-[#9a9a9a]">
-          {form.description.length}/500
+      <SkillChips skills={form.selectedSkills} onRemove={onRemoveSkill} onAdd={onOpenSkillPicker} />
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label className="text-[13px] font-medium text-[#3a3a3a]">Total Marks</Label>
+          <Input type="number" placeholder="eg: 100" value={form.totalMarks}
+            className="text-[13px]" onChange={(e) => onChange("totalMarks", e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-[13px] font-medium text-[#3a3a3a]">Duration</Label>
+          <Input placeholder="eg: 75 mins" value={form.duration}
+            className="text-[13px]" onChange={(e) => onChange("duration", e.target.value)} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label className="text-[13px] font-medium text-[#3a3a3a]">Pass Marks</Label>
+          <Input placeholder="eg: 65/100" value={form.passMarks}
+            className="text-[13px]" onChange={(e) => onChange("passMarks", e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-[13px] font-medium text-[#3a3a3a]">Difficulty</Label>
+          <Select value={form.difficulty} onValueChange={(v) => onChange("difficulty", v)}>
+            <SelectTrigger className="h-10 w-full rounded-xl border-0 bg-neutral-100 text-[13px] text-[#9a9a9a] shadow-none focus:ring-0 focus:ring-offset-0 data-[placeholder]:text-[#9a9a9a]">
+              <SelectValue placeholder="Select Difficulty level" />
+            </SelectTrigger>
+            <SelectContent position="popper" className="w-[--radix-select-trigger-width]">
+              {DIFFICULTIES.map((d) => <SelectItem key={d} value={d} className="text-[13px]">{d}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>
@@ -647,87 +537,75 @@ function CustomStepContent({
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
 
-type FlowStep = "options" | "ai-1" | "ai-2" | "custom" | "success";
+const EMPTY_AI1: AiStep1Form     = { name: "", jobTitle: "", jobDescription: "", roleType: "", experienceRange: "", selectedSkills: [] };
+const EMPTY_AI2: AiStep2Form     = { questionSetType: "", totalMarks: "", duration: "", passMarks: "", difficulty: "" };
+const EMPTY_C1:  CustomStep1Form = { name: "", jobTitle: "", roleType: "", experienceRange: "", selectedSkills: [], totalMarks: "", duration: "", passMarks: "", difficulty: "" };
 
 export default function CreateAssessmentModal({ open, saving, onClose, onCreate }: Props) {
-  const [step, setStep]               = useState<FlowStep>("options");
+  const router = useRouter();
+
+  const [step,         setStep]         = useState<FlowStep>("options");
   const [methodChoice, setMethodChoice] = useState<"ai" | "custom">("ai");
   const [skillPickerOpen, setSkillPickerOpen] = useState(false);
 
-  // AI form
-  const [aiStep1, setAiStep1] = useState<AiStep1Form>({
-    name: "", jobTitle: "", jobDescription: "",
-    roleType: "", experienceRange: "", selectedSkills: [],
-  });
+  const [aiStep1,       setAiStep1]       = useState<AiStep1Form>(EMPTY_AI1);
   const [aiStep1Errors, setAiStep1Errors] = useState<AiStep1Errors>({});
-
-  const [aiStep2, setAiStep2] = useState<AiStep2Form>({
-    questionSetType: "", totalMarks: "", duration: "", passMarks: "", difficulty: "",
-  });
+  const [aiStep2,       setAiStep2]       = useState<AiStep2Form>(EMPTY_AI2);
   const [aiStep2Errors, setAiStep2Errors] = useState<AiStep2Errors>({});
 
-  // Custom form
-  const [customForm, setCustomForm]   = useState<CustomForm>({ name: "", assessmentType: "", description: "" });
-  const [customErrors, setCustomErrors] = useState<CustomErrors>({});
+  const [customStep1,       setCustomStep1]       = useState<CustomStep1Form>(EMPTY_C1);
+  const [customStep1Errors, setCustomStep1Errors] = useState<CustomStep1Errors>({});
 
-  // ── Reset ─────────────────────────────────────────────────────────────────
   const resetAll = () => {
     setStep("options"); setMethodChoice("ai"); setSkillPickerOpen(false);
-    setAiStep1({ name: "", jobTitle: "", jobDescription: "", roleType: "", experienceRange: "", selectedSkills: [] });
-    setAiStep1Errors({});
-    setAiStep2({ questionSetType: "", totalMarks: "", duration: "", passMarks: "", difficulty: "" });
-    setAiStep2Errors({});
-    setCustomForm({ name: "", assessmentType: "", description: "" }); setCustomErrors({});
+    setAiStep1(EMPTY_AI1); setAiStep1Errors({});
+    setAiStep2(EMPTY_AI2); setAiStep2Errors({});
+    setCustomStep1(EMPTY_C1); setCustomStep1Errors({});
   };
   const handleClose = () => { resetAll(); onClose(); };
 
-  // ── Skill helpers ─────────────────────────────────────────────────────────
-  const toggleSkill = (skill: WorkflowSkill) => {
-    setAiStep1((prev) => {
-      const exists = prev.selectedSkills.some((s) => s.skillId === skill.skillId);
-      if (!exists && prev.selectedSkills.length >= 5) return prev;
-      return {
-        ...prev,
-        selectedSkills: exists
-          ? prev.selectedSkills.filter((s) => s.skillId !== skill.skillId)
-          : [...prev.selectedSkills, skill],
-      };
+  // Skill toggles
+  const toggleAiSkill = (skill: WorkflowSkill) =>
+    setAiStep1((p) => {
+      const exists = p.selectedSkills.some((s) => s.skillId === skill.skillId);
+      if (!exists && p.selectedSkills.length >= 5) return p;
+      return { ...p, selectedSkills: exists ? p.selectedSkills.filter((s) => s.skillId !== skill.skillId) : [...p.selectedSkills, skill] };
     });
-  };
-  const removeSkill = (id: string) =>
-    setAiStep1((p) => ({ ...p, selectedSkills: p.selectedSkills.filter((s) => s.skillId !== id) }));
 
-  // ── Validation ────────────────────────────────────────────────────────────
+  const toggleCustomSkill = (skill: WorkflowSkill) =>
+    setCustomStep1((p) => {
+      const exists = p.selectedSkills.some((s) => s.skillId === skill.skillId);
+      if (!exists && p.selectedSkills.length >= 5) return p;
+      return { ...p, selectedSkills: exists ? p.selectedSkills.filter((s) => s.skillId !== skill.skillId) : [...p.selectedSkills, skill] };
+    });
+
+  const isCustomFlow = step === "custom-1";
+
+  // Validation
   const validateAi1 = () => {
     const e: AiStep1Errors = {};
     if (!aiStep1.name.trim())     e.name     = "Assessment name is required";
     if (!aiStep1.jobTitle.trim()) e.jobTitle = "Job title is required";
-    setAiStep1Errors(e);
-    return Object.keys(e).length === 0;
+    setAiStep1Errors(e); return Object.keys(e).length === 0;
   };
   const validateAi2 = () => {
     const e: AiStep2Errors = {};
     if (!aiStep2.questionSetType) e.questionSetType = "Please select a question set type";
-    setAiStep2Errors(e);
-    return Object.keys(e).length === 0;
+    setAiStep2Errors(e); return Object.keys(e).length === 0;
   };
-  const validateCustom = () => {
-    const e: CustomErrors = {};
-    if (!customForm.name.trim())    e.name           = "Assessment name is required";
-    if (!customForm.assessmentType) e.assessmentType = "Please select a type";
-    setCustomErrors(e);
-    return Object.keys(e).length === 0;
+  const validateCustom1 = () => {
+    const e: CustomStep1Errors = {};
+    if (!customStep1.name.trim()) e.name = "Assessment name is required";
+    setCustomStep1Errors(e); return Object.keys(e).length === 0;
   };
 
-  // ── Navigation ────────────────────────────────────────────────────────────
-  const handleOptionsContinue = () => {
-    setStep(methodChoice === "ai" ? "ai-1" : "custom");
-  };
-
+  // Handlers
   const handleAiCreate = async () => {
     if (!validateAi2()) return;
     await onCreate({
-      name: aiStep1.name.trim(), assessmentType: "AI Powered Assessment", description: "",
+      name:            aiStep1.name.trim(),
+      assessmentType:  "AI Powered Assessment",
+      description:     "",
       creationMethod:  "ai",
       jobTitle:        aiStep1.jobTitle.trim(),
       jobDescription:  aiStep1.jobDescription.trim(),
@@ -743,141 +621,122 @@ export default function CreateAssessmentModal({ open, saving, onClose, onCreate 
     setStep("success");
   };
 
-  const handleCustomCreate = async () => {
-    if (!validateCustom()) return;
-    await onCreate({
-      name: customForm.name.trim(), assessmentType: "Customized Assessment",
-      description: customForm.description.trim(), creationMethod: "custom",
+  const handleCustomSaveAndContinue = async () => {
+    if (!validateCustom1() || saving) return;
+    const assessmentId = await onCreate({
+      name:            customStep1.name.trim(),
+      assessmentType:  "Customized Assessment",
+      description:     "",
+      creationMethod:  "custom",
+      jobTitle:        customStep1.jobTitle.trim() || undefined,
+      roleType:        customStep1.roleType        || undefined,
+      experienceRange: customStep1.experienceRange || undefined,
+      skills:          customStep1.selectedSkills.map((s) => s.skillId),
+      totalMarks:      customStep1.totalMarks ? Number(customStep1.totalMarks) : undefined,
+      passMarks:       customStep1.passMarks  ? Number(customStep1.passMarks)  : undefined,
+      duration:        customStep1.duration   ? Number(customStep1.duration)   : undefined,
+      difficulty:      customStep1.difficulty || undefined,
     });
-    setStep("success");
+    if (assessmentId) {
+      handleClose();
+      router.push(`/whitecollar/assessments/${assessmentId}/build`);
+    }
   };
 
-  // ── Header for ai steps ───────────────────────────────────────────────────
   const aiStepNum  = step === "ai-1" ? 1 : 2;
   const aiSubtitle = step === "ai-1" ? "Assessment details" : "Set question preferences";
 
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-        <DialogContent className="max-h-[90vh] max-w-[560px] overflow-y-auto p-0" showCloseButton>
+        <DialogContent className="max-h-[90vh] max-w-[580px] overflow-y-auto p-0" showCloseButton>
 
-          {/* ── Success ── */}
           {step === "success" && (
             <SuccessScreen onClose={handleClose} onAssign={handleClose} />
           )}
 
-          {/* ── Options ── */}
           {step === "options" && (
             <AssessmentOptionsStep
-              selected={methodChoice}
-              onSelect={setMethodChoice}
+              selected={methodChoice} onSelect={setMethodChoice}
               onCancel={handleClose}
-              onContinue={handleOptionsContinue}
+              onContinue={() => setStep(methodChoice === "ai" ? "ai-1" : "custom-1")}
             />
           )}
 
-          {/* ── AI Step 1 ── */}
           {step === "ai-1" && (
             <>
               <DialogHeader className="border-b border-neutral-200 px-6 py-4">
                 <DialogTitle className="text-[16px] font-semibold">AI Powered Assessment</DialogTitle>
-                <p className="text-[12px] text-[#9a9a9a]">
-                  Step {aiStepNum} of 2 · {aiSubtitle}
-                </p>
+                <p className="text-[12px] text-[#9a9a9a]">Step {aiStepNum} of 2 · {aiSubtitle}</p>
                 <ProgressBar step={aiStepNum} total={2} />
               </DialogHeader>
-
               <div className="py-5">
-                <AiStep1Content
-                  form={aiStep1}
-                  errors={aiStep1Errors}
+                <AiStep1Content form={aiStep1} errors={aiStep1Errors}
                   onOpenSkillPicker={() => setSkillPickerOpen(true)}
                   onChange={(k, v) => {
                     setAiStep1((p) => ({ ...p, [k]: v }));
-                    const errKey = k as "name" | "jobTitle";
-                    if (errKey === "name" || errKey === "jobTitle") {
-                      setAiStep1Errors((p) => { const n = { ...p }; delete n[errKey]; return n; });
-                    }
+                    const ek = k as "name" | "jobTitle";
+                    if (ek === "name" || ek === "jobTitle")
+                      setAiStep1Errors((p) => { const n = { ...p }; delete n[ek]; return n; });
                   }}
-                  onRemoveSkill={removeSkill}
+                  onRemoveSkill={(id) => setAiStep1((p) => ({ ...p, selectedSkills: p.selectedSkills.filter((s) => s.skillId !== id) }))}
                 />
               </div>
-
               <div className="flex items-center justify-between border-t border-neutral-200 px-6 py-4">
                 <Button variant="outline" onClick={() => setStep("options")} disabled={saving}>Back</Button>
-                <Button
-                  className="bg-[#ff5723] text-white hover:bg-[#f04d1d]"
-                  onClick={() => { if (validateAi1()) setStep("ai-2"); }}
-                  disabled={saving}
-                >
-                  Continue
-                </Button>
+                <Button className="bg-[#ff5723] text-white hover:bg-[#f04d1d]"
+                  onClick={() => { if (validateAi1()) setStep("ai-2"); }} disabled={saving}>Continue</Button>
               </div>
             </>
           )}
 
-          {/* ── AI Step 2 ── */}
           {step === "ai-2" && (
             <>
               <DialogHeader className="border-b border-neutral-200 px-6 py-4">
                 <DialogTitle className="text-[16px] font-semibold">AI Powered Assessment</DialogTitle>
-                <p className="text-[12px] text-[#9a9a9a]">
-                  Step {aiStepNum} of 2 · {aiSubtitle}
-                </p>
+                <p className="text-[12px] text-[#9a9a9a]">Step {aiStepNum} of 2 · {aiSubtitle}</p>
                 <ProgressBar step={aiStepNum} total={2} />
               </DialogHeader>
-
               <div className="py-5">
-                <AiStep2Content
-                  form={aiStep2}
-                  errors={aiStep2Errors}
+                <AiStep2Content form={aiStep2} errors={aiStep2Errors}
                   onChange={(k, v) => {
                     setAiStep2((p) => ({ ...p, [k]: v }));
                     setAiStep2Errors((p) => { const n = { ...p }; delete n[k]; return n; });
                   }}
                 />
               </div>
-
               <div className="flex items-center justify-between border-t border-neutral-200 px-6 py-4">
                 <Button variant="outline" onClick={() => setStep("ai-1")} disabled={saving}>Back</Button>
-                <Button
-                  className="bg-[#ff5723] text-white hover:bg-[#f04d1d]"
-                  onClick={handleAiCreate}
-                  disabled={saving}
-                >
+                <Button className="bg-[#ff5723] text-white hover:bg-[#f04d1d]"
+                  onClick={handleAiCreate} disabled={saving}>
                   {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</> : "Create Assessment"}
                 </Button>
               </div>
             </>
           )}
 
-          {/* ── Custom ── */}
-          {step === "custom" && (
+          {step === "custom-1" && (
             <>
               <DialogHeader className="border-b border-neutral-200 px-6 py-4">
                 <DialogTitle className="text-[16px] font-semibold">Customized Assessment</DialogTitle>
-                <p className="text-[12px] text-[#9a9a9a]">Fill in the details to create your assessment.</p>
+                <p className="text-[12px] text-[#9a9a9a]">Step 1 of 4 · Assessment details</p>
+                <ProgressBar step={1} total={4} />
               </DialogHeader>
-
               <div className="py-5">
-                <CustomStepContent
-                  form={customForm}
-                  errors={customErrors}
+                <CustomStep1Content form={customStep1} errors={customStep1Errors}
+                  onOpenSkillPicker={() => setSkillPickerOpen(true)}
                   onChange={(k, v) => {
-                    setCustomForm((p) => ({ ...p, [k]: v }));
-                    setCustomErrors((p) => { const n = { ...p }; delete n[k]; return n; });
+                    setCustomStep1((p) => ({ ...p, [k]: v }));
+                    if (k === "name") setCustomStep1Errors((p) => { const n = { ...p }; delete n.name; return n; });
                   }}
+                  onRemoveSkill={(id) => setCustomStep1((p) => ({ ...p, selectedSkills: p.selectedSkills.filter((s) => s.skillId !== id) }))}
                 />
               </div>
-
               <div className="flex items-center justify-between border-t border-neutral-200 px-6 py-4">
                 <Button variant="outline" onClick={() => setStep("options")} disabled={saving}>Back</Button>
-                <Button
-                  className="bg-[#ff5723] text-white hover:bg-[#f04d1d]"
-                  onClick={handleCustomCreate}
-                  disabled={saving}
-                >
-                  {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</> : "Create Assessment"}
+                <Button className="bg-[#ff5723] text-white hover:bg-[#f04d1d]"
+                  onClick={handleCustomSaveAndContinue} disabled={saving}>
+                  {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Save & Continue"}
                 </Button>
               </div>
             </>
@@ -886,12 +745,11 @@ export default function CreateAssessmentModal({ open, saving, onClose, onCreate 
         </DialogContent>
       </Dialog>
 
-      {/* Skill picker — separate dialog so it layers above the main one */}
       <SkillPickerDialog
         open={skillPickerOpen}
-        selectedSkills={aiStep1.selectedSkills}
+        selectedSkills={isCustomFlow ? customStep1.selectedSkills : aiStep1.selectedSkills}
         onClose={() => setSkillPickerOpen(false)}
-        onToggle={toggleSkill}
+        onToggle={isCustomFlow ? toggleCustomSkill : toggleAiSkill}
       />
     </>
   );

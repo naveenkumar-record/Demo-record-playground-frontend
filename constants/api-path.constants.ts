@@ -52,9 +52,13 @@ const apiPathConstants = {
     base: "/projects",
   },
   assessments: {
-    base: "/assessments",
-    toggle: (id: string) => `/assessments/${id}/toggle`,
-    delete: (id: string) => `/assessments/${id}`,
+    base:     "/assessments",
+    byId:     (id: string) => `/assessments/${id}`,
+    sections: (id: string) => `/assessments/${id}/sections`,
+    coding:   (id: string) => `/assessments/${id}/coding`,
+    publish:  (id: string) => `/assessments/${id}/publish`,
+    toggle:   (id: string) => `/assessments/${id}/toggle`,
+    delete:   (id: string) => `/assessments/${id}`,
   },
 } as const;
 

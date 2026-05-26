@@ -122,7 +122,7 @@ export default function AssessmentsPage() {
 
   // ── Modal state ─────────────────────────────────────────────────────────────
   const [modalOpen, setModalOpen] = useState(false);
-  const [saving, setSaving]       = useState(false);
+  const [saving,    setSaving]    = useState(false);
 
   // ── Fetch ───────────────────────────────────────────────────────────────────
 
@@ -154,8 +154,9 @@ export default function AssessmentsPage() {
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
-  const handleCreate = async (data: CreateAssessmentResult) => {
-    if (!orgId) return;
+  // Returns assessmentId so modal can navigate (custom flow) or show success (AI flow)
+  const handleCreate = async (data: CreateAssessmentResult): Promise<string | undefined> => {
+    if (!orgId) return undefined;
     setSaving(true);
     try {
       const token = getAccessToken();
@@ -183,10 +184,15 @@ export default function AssessmentsPage() {
       );
       const newItem = res.data?.assessment;
       if (newItem) setAssessments((prev) => [newItem, ...prev]);
-      toast.success("Assessment created successfully");
-      setModalOpen(false);
+      // AI flow: show success toast (modal handles success screen internally)
+      // Custom flow: no toast here; modal navigates to build page
+      if (data.creationMethod === "ai") {
+        toast.success("Assessment created successfully");
+      }
+      return newItem?.assessmentId;
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to create assessment");
+      return undefined;
     } finally {
       setSaving(false);
     }
@@ -356,6 +362,7 @@ export default function AssessmentsPage() {
         onClose={() => setModalOpen(false)}
         onCreate={handleCreate}
       />
+
 
     </div>
   );
