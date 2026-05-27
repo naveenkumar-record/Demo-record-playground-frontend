@@ -51,6 +51,9 @@ const apiPathConstants = {
   projects: {
     base: "/projects",
   },
+  bluecollar: {
+    requests: "/bluecollar/requests",
+  },
 } as const;
 
 export default apiPathConstants;
