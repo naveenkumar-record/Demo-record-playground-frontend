@@ -12,6 +12,9 @@ export type WorkflowItem = {
   totalRequests: number;
   totalVerifications: number;
   verifiedCount: number;
+  notAttempted: number;
+  inProgress: number;
+  expired: number;
   completionPercent: number;
   workflowType: string;
   jobDescription?: string;
@@ -42,6 +45,9 @@ export type CreateWorkflowPayload = {
   orgId: string;
   name: string;
   workflowType: string;
+  jobTitle?: string;
+  roleType?: string;
+  experienceRange?: string;
   jobDescription?: string;
   startMessage: string;
   completionMessage: string;

@@ -130,7 +130,7 @@ export default function DashboardPage() {
               <button
                 key={kpi.label}
                 type="button"
-                className="rounded-md border border-neutral-200 bg-white p-4 text-left transition-colors hover:bg-neutral-50"
+                className="cursor-pointer rounded-md border border-neutral-200 bg-white p-4 text-left transition-colors hover:bg-neutral-50"
               >
                 <p className="text-[12px] font-medium text-[#7a7a7a]">{kpi.label}</p>
                 <div className="mt-3 flex items-end justify-between gap-3">
@@ -204,9 +204,15 @@ export default function DashboardPage() {
                     <TableCell className="text-[13px] text-[#1f1f1f]">
                       {workflow.verifiedCount.toLocaleString("en-IN")}
                     </TableCell>
-                    <TableCell className="text-[13px] text-[#1f1f1f]">0</TableCell>
-                    <TableCell className="text-[13px] text-[#1f1f1f]">0</TableCell>
-                    <TableCell className="text-[13px] text-[#1f1f1f]">0</TableCell>
+                    <TableCell className="text-[13px] text-[#1f1f1f]">
+                      {(workflow.inProgress ?? 0).toLocaleString("en-IN")}
+                    </TableCell>
+                    <TableCell className="text-[13px] text-[#1f1f1f]">
+                      {(workflow.notAttempted ?? 0).toLocaleString("en-IN")}
+                    </TableCell>
+                    <TableCell className="text-[13px] text-[#1f1f1f]">
+                      {(workflow.expired ?? 0).toLocaleString("en-IN")}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
