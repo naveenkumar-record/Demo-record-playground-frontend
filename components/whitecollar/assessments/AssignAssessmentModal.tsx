@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { X, Upload, AlertCircle, Info } from "lucide-react";
+import { X, Upload, AlertCircle, Info, Mail, Download } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button }   from "@/components/ui/button";
@@ -58,6 +58,24 @@ function deduplicateByEmail(rows: CandidateRow[]): { unique: CandidateRow[]; rem
     if (!seen.has(key)) { seen.add(key); unique.push(r); }
   }
   return { unique, removed: rows.length - unique.length };
+}
+
+// ── Sample CSV ────────────────────────────────────────────────────────────────
+
+const SAMPLE_CSV = `Name,Email
+John Smith,john.smith@example.com
+Jane Doe,jane.doe@example.com
+Alex Johnson,alex.johnson@example.com
+`;
+
+function downloadSampleCSV() {
+  const blob = new Blob([SAMPLE_CSV], { type: "text/csv" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = "sample_candidates.csv";
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -201,7 +219,9 @@ export default function AssignAssessmentModal({
         { orgId, batchName, tag, candidates: uniqueCandidates },
         getToken(),
       );
-      toast.success(`Assessment assigned to ${uniqueCandidates.length} candidate${uniqueCandidates.length !== 1 ? "s" : ""}`);
+      toast.success(
+        `Assessment assigned to ${uniqueCandidates.length} candidate${uniqueCandidates.length !== 1 ? "s" : ""}. Invite emails sent.`,
+      );
       handleClose();
       onSuccess();
     } catch (err: unknown) {
@@ -244,6 +264,14 @@ export default function AssignAssessmentModal({
                 Upload Student Data
               </p>
               <UploadZone file={file} onFile={setFile} />
+              <button
+                type="button"
+                onClick={downloadSampleCSV}
+                className="mt-2 flex items-center gap-1 text-[12px] text-[#7a7a7a] hover:text-[#ff5723] transition-colors cursor-pointer"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download sample CSV
+              </button>
             </div>
 
             {/* Batch name */}
@@ -318,6 +346,17 @@ export default function AssignAssessmentModal({
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                 <p className="text-[12px] text-amber-700">
                   <span className="font-semibold">{alreadyAssigned.length} email{alreadyAssigned.length !== 1 ? "s" : ""}</span> already assigned to this assessment and will be skipped.
+                </p>
+              </div>
+            )}
+
+            {/* Email invite notice */}
+            {uniqueCandidates.length > 0 && (
+              <div className="mb-3 flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2.5">
+                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
+                <p className="text-[12px] text-blue-700">
+                  An assessment invite email will be sent to{" "}
+                  <span className="font-semibold">{uniqueCandidates.length} candidate{uniqueCandidates.length !== 1 ? "s" : ""}</span> once assigned.
                 </p>
               </div>
             )}
