@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import CreateAssessmentModal, {
   type CreateAssessmentResult,
 } from "@/components/whitecollar/assessments/CreateAssessmentModal";
+import EditAssessmentModal from "@/components/whitecollar/assessments/EditAssessmentModal";
 
 import {
   listAssessments,
@@ -121,8 +122,9 @@ export default function AssessmentsPage() {
   const [loading, setLoading]         = useState(false);
 
   // ── Modal state ─────────────────────────────────────────────────────────────
-  const [modalOpen, setModalOpen] = useState(false);
-  const [saving,    setSaving]    = useState(false);
+  const [modalOpen,   setModalOpen]   = useState(false);
+  const [saving,      setSaving]      = useState(false);
+  const [editTarget,  setEditTarget]  = useState<AssessmentItem | null>(null);
 
   // ── Fetch ───────────────────────────────────────────────────────────────────
 
@@ -310,7 +312,12 @@ export default function AssessmentsPage() {
                   {/* Actions */}
                   <TableCell className="pr-5">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setEditTarget(assessment)}
+                      >
                         <Pencil className="h-4 w-4 text-[#697282]" />
                       </Button>
                       <DropdownMenu>
@@ -361,6 +368,20 @@ export default function AssessmentsPage() {
         saving={saving}
         onClose={() => setModalOpen(false)}
         onCreate={handleCreate}
+      />
+
+      {/* Edit Assessment Modal */}
+      <EditAssessmentModal
+        open={!!editTarget}
+        assessment={editTarget}
+        orgId={orgId ?? ""}
+        onClose={() => setEditTarget(null)}
+        onUpdated={(updated) => {
+          setAssessments((prev) =>
+            prev.map((a) => (a.assessmentId === updated.assessmentId ? updated : a)),
+          );
+          setEditTarget(null);
+        }}
       />
 
 

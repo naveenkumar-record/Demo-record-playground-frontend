@@ -25,28 +25,6 @@ export type AssessmentSection = {
   questions:         SectionQuestion[];
 };
 
-// ── Skill Assessment types ────────────────────────────────────────────────────
-
-export type TestCase = {
-  input:          string;
-  expectedOutput: string;
-  explanation:    string;
-};
-
-export type CodingProblem = {
-  problemId:           string;
-  title:               string;
-  marks:               number;
-  allowedLanguages:    string[];
-  problemStatement:    string;
-  sampleInput:         string;
-  sampleOutput:        string;
-  solutionLanguage:    string;
-  solutionCode:        string;
-  solutionExplanation: string;
-  testCases:           TestCase[];
-};
-
 // ── Assessment item ───────────────────────────────────────────────────────────
 
 export type AssessmentItem = {
@@ -69,7 +47,6 @@ export type AssessmentItem = {
   duration:        number;
   difficulty:      string;
   sections:        AssessmentSection[];
-  codingProblems:  CodingProblem[];
   createdAt:       string;
   updatedAt:       string;
 };
@@ -77,6 +54,21 @@ export type AssessmentItem = {
 export type AssessmentListResponse = {
   assessments: AssessmentItem[];
   pagination: { total: number; page: number; limit: number; totalPages: number };
+};
+
+export type UpdateAssessmentPayload = {
+  orgId:           string;
+  name?:            string;
+  jobTitle?:        string;
+  jobDescription?:  string;
+  roleType?:        string;
+  experienceRange?: string;
+  skills?:          string[];
+  questionSetType?: string;
+  totalMarks?:      number;
+  passMarks?:       number;
+  duration?:        number;
+  difficulty?:      string;
 };
 
 export type CreateAssessmentPayload = {
@@ -127,6 +119,17 @@ export const createAssessment = (payload: CreateAssessmentPayload, accessToken: 
     apiPathConstants.assessments.base, payload, { accessToken },
   );
 
+export const updateAssessment = (
+  assessmentId: string,
+  payload:      UpdateAssessmentPayload,
+  accessToken:  string,
+) =>
+  putRequest<{ assessment: AssessmentItem }, UpdateAssessmentPayload>(
+    apiPathConstants.assessments.byId(assessmentId),
+    payload,
+    { accessToken },
+  );
+
 export const updateKnowledgeSections = (
   assessmentId: string,
   orgId:        string,
@@ -136,18 +139,6 @@ export const updateKnowledgeSections = (
   putRequest<{ assessment: AssessmentItem }, { orgId: string; sections: AssessmentSection[] }>(
     apiPathConstants.assessments.sections(assessmentId),
     { orgId, sections },
-    { accessToken },
-  );
-
-export const updateCodingProblems = (
-  assessmentId:   string,
-  orgId:          string,
-  codingProblems: CodingProblem[],
-  accessToken:    string,
-) =>
-  putRequest<{ assessment: AssessmentItem }, { orgId: string; codingProblems: CodingProblem[] }>(
-    apiPathConstants.assessments.coding(assessmentId),
-    { orgId, codingProblems },
     { accessToken },
   );
 
