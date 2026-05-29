@@ -6,6 +6,7 @@ import {
   Network,
   Send,
   Settings,
+  UserPlus,
 } from "lucide-react";
 
 export type NavItem = {
@@ -54,6 +55,7 @@ export const whitecollarNav: NavGroup[] = [
     items: [
       { label: "Workflows", href: "/whitecollar/workflows", icon: Network },
       { label: "Assessments", href: "/whitecollar/assessments", icon: ClipboardList },
+      { label: "Assign", href: "/whitecollar/assign", icon: UserPlus },
       { label: "Requests", href: "/whitecollar/requests", icon: FileText },
     ],
   },

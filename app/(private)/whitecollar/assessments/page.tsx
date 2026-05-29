@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   ClipboardList,
   MoreVertical,
@@ -16,27 +16,11 @@ import { useTestMode } from "@/components/layout/testModeContext";
 import { Badge }       from "@/components/ui/badge";
 import { Button }      from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input }    from "@/components/ui/input";
-import { Label }    from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -45,43 +29,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
-import { cn }       from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+import CreateAssessmentModal, {
+  type CreateAssessmentResult,
+} from "@/components/whitecollar/assessments/CreateAssessmentModal";
+import EditAssessmentModal from "@/components/whitecollar/assessments/EditAssessmentModal";
 
-type AssessmentType =
-  | "Technical Screen"
-  | "Behavioral Interview"
-  | "Cognitive Test"
-  | "Domain Knowledge"
-  | "Custom";
+import {
+  listAssessments,
+  createAssessment,
+  toggleAssessmentActive,
+  deleteAssessmentApi,
+  type AssessmentItem,
+} from "@/api/assessment.api";
 
-type Assessment = {
-  assessmentId: string;
-  name: string;
-  assessmentType: AssessmentType;
-  description: string;
-  isActive: boolean;
-  createdAt: string;
-};
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
-type CreateAssessmentForm = {
-  name: string;
-  assessmentType: AssessmentType | "";
-  description: string;
-};
-
-const ASSESSMENT_TYPES: AssessmentType[] = [
-  "Technical Screen",
-  "Behavioral Interview",
-  "Cognitive Test",
-  "Domain Knowledge",
-  "Custom",
-];
-
-function emptyForm(): CreateAssessmentForm {
-  return { name: "", assessmentType: "", description: "" };
+function getAccessToken(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("auth_access_token") ?? "";
 }
 
 function formatDate(value: string) {
@@ -141,19 +108,18 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AssessmentsPage() {
-  const { activeOrg }    = useOrg();
-  const { activeProject } = useProject();
-  const { isTestMode }   = useTestMode();
+  const { activeOrg }                                         = useOrg();
+  const { activeProject }                                     = useProject();
+  const { isTestMode }                                        = useTestMode();
 
-  // Derived context values (ready for API wiring)
-  const _orgId     = activeOrg?.orgId;
-  const _projectId = activeProject?.projectId ?? null;   // null = Default
-  const _mode      = isTestMode ? "test" : "live";
-  void _orgId; void _projectId; void _mode;              // suppress unused-var until API is wired
+  const orgId     = activeOrg?.orgId;
+  const projectId = activeProject?.projectId ?? undefined;
+  const mode      = isTestMode ? "test" : "live";
 
-  // ── Local state (replace with API fetch later) ─────────────────────────────
-  const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [loading]                     = useState(false);
+  // ── Data state ──────────────────────────────────────────────────────────────
+  const [assessments, setAssessments] = useState<AssessmentItem[]>([]);
+  const [total, setTotal]             = useState(0);
+  const [loading, setLoading]         = useState(false);
 
   // Modal
   const [modalOpen, setModalOpen] = useState(false);
@@ -161,27 +127,15 @@ export default function AssessmentsPage() {
   const [errors, setErrors]       = useState<Partial<Record<keyof CreateAssessmentForm, string>>>({});
   const [saving, setSaving]       = useState(false);
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  // ── Fetch ───────────────────────────────────────────────────────────────────
 
-  const openModal = () => {
-    setForm(emptyForm());
-    setErrors({});
-    setModalOpen(true);
-  };
+  const fetchKeyRef = useRef("");
 
-  const closeModal = () => {
-    setModalOpen(false);
-    setForm(emptyForm());
-    setErrors({});
-  };
+  const fetchAssessments = useCallback(async () => {
+    if (!orgId) return;
 
-  const updateField = <K extends keyof CreateAssessmentForm>(
-    key: K,
-    value: CreateAssessmentForm[K],
-  ) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    setErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
-  };
+    const key = `${orgId}|${mode}|${projectId ?? ""}`;
+    fetchKeyRef.current = key;
 
   const validate = (): boolean => {
     const e: Partial<Record<keyof CreateAssessmentForm, string>> = {};
@@ -189,46 +143,86 @@ export default function AssessmentsPage() {
     if (!form.assessmentType)       e.assessmentType  = "Please select a type";
     setErrors(e);
     return Object.keys(e).length === 0;
-  };
+      if (fetchKeyRef.current === key) setLoading(false);
+    }
+  }, [orgId, mode, projectId]);
 
-  const handleCreate = async () => {
-    if (!validate()) return;
+  useEffect(() => { fetchAssessments(); }, [fetchAssessments]);
 
+  // ── Handlers ─────────────────────────────────────────────────────────────────
+
+  // Returns assessmentId so modal can navigate (custom flow) or show success (AI flow)
+  const handleCreate = async (data: CreateAssessmentResult): Promise<string | undefined> => {
+    if (!orgId) return undefined;
     setSaving(true);
     try {
-      // TODO: replace with real API call
-      // await createAssessment({ orgId, projectId, mode, ...form }, token);
-
-      const newAssessment: Assessment = {
-        assessmentId: `asmnt_${Math.random().toString(36).slice(2, 10)}`,
-        name:          form.name.trim(),
-        assessmentType: form.assessmentType as AssessmentType,
-        description:   form.description.trim(),
-        isActive:      true,
-        createdAt:     new Date().toISOString(),
-      };
-
-      setAssessments((prev) => [newAssessment, ...prev]);
-      toast.success("Assessment created successfully");
-      closeModal();
+      const token = getAccessToken();
+      const res   = await createAssessment(
+        {
+          orgId,
+          mode,
+          projectId,
+          name:            data.name,
+          assessmentType:  data.assessmentType,
+          description:     data.description,
+          creationMethod:  data.creationMethod,
+          jobTitle:        data.jobTitle,
+          jobDescription:  data.jobDescription,
+          roleType:        data.roleType,
+          experienceRange: data.experienceRange,
+          skills:          data.skills,
+          questionSetType: data.questionSetType,
+          totalMarks:      data.totalMarks,
+          passMarks:       data.passMarks,
+          duration:        data.duration,
+          difficulty:      data.difficulty,
+        },
+        token,
+      );
+      const newItem = res.data?.assessment;
+      if (newItem) setAssessments((prev) => [newItem, ...prev]);
+      // AI flow: show success toast (modal handles success screen internally)
+      // Custom flow: no toast here; modal navigates to build page
+      if (data.creationMethod === "ai") {
+        toast.success("Assessment created successfully");
+      }
+      return newItem?.assessmentId;
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to create assessment");
+      return undefined;
     } finally {
       setSaving(false);
     }
   };
 
-  const handleToggleActive = (assessmentId: string) => {
-    setAssessments((prev) =>
-      prev.map((a) =>
-        a.assessmentId === assessmentId ? { ...a, isActive: !a.isActive } : a,
-      ),
-    );
+  const handleToggleActive = async (assessmentId: string) => {
+    if (!orgId) return;
+    try {
+      const token = getAccessToken();
+      const res   = await toggleAssessmentActive(assessmentId, orgId, token);
+      const updated = res.data?.assessment;
+      if (updated) {
+        setAssessments((prev) =>
+          prev.map((a) => (a.assessmentId === assessmentId ? updated : a)),
+        );
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to update assessment");
+    }
   };
 
-  const handleDelete = (assessmentId: string) => {
+  const handleDelete = async (assessmentId: string) => {
+    if (!orgId) return;
+    // Optimistic remove
     setAssessments((prev) => prev.filter((a) => a.assessmentId !== assessmentId));
-    toast.success("Assessment deleted");
+    try {
+      const token = getAccessToken();
+      await deleteAssessmentApi(assessmentId, orgId, token);
+      toast.success("Assessment deleted");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete assessment");
+      fetchAssessments(); // restore on error
+    }
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -241,7 +235,7 @@ export default function AssessmentsPage() {
         <h1 className="text-[16px] font-semibold text-[#1f1f1f]">Assessments</h1>
         <Button
           className="h-10 gap-2 bg-[#ff5723] px-5 text-[13px] font-semibold text-white hover:bg-[#f04d1d]"
-          onClick={openModal}
+          onClick={() => setModalOpen(true)}
         >
           <Plus className="h-4 w-4" />
           Add Assessment
@@ -269,7 +263,7 @@ export default function AssessmentsPage() {
             {loading ? (
               Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)
             ) : assessments.length === 0 ? (
-              <EmptyState onAdd={openModal} />
+              <EmptyState onAdd={() => setModalOpen(true)} />
             ) : (
               assessments.map((assessment) => (
                 <TableRow key={assessment.assessmentId}>
@@ -313,7 +307,12 @@ export default function AssessmentsPage() {
                   {/* Actions */}
                   <TableCell className="pr-5">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setEditTarget(assessment)}
+                      >
                         <Pencil className="h-4 w-4 text-[#697282]" />
                       </Button>
                       <DropdownMenu>
@@ -351,107 +350,35 @@ export default function AssessmentsPage() {
         {assessments.length > 0 && (
           <div className="flex items-center justify-between border-t border-neutral-200 px-5 py-4 text-[12px] text-[#7a7a7a]">
             <p>
-              Showing {assessments.length} of {assessments.length}{" "}
-              Assessment{assessments.length === 1 ? "" : "s"}
+              Showing {assessments.length} of {total}{" "}
+              Assessment{total === 1 ? "" : "s"}
             </p>
           </div>
         )}
       </div>
 
-      {/* ── Create Assessment Modal ──────────────────────────────────────────── */}
-      <Dialog open={modalOpen} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent
-          className="max-h-[90vh] max-w-[520px] overflow-y-auto p-0"
-          showCloseButton
-        >
-          <DialogHeader className="border-b border-neutral-200 px-5 py-4">
-            <DialogTitle className="text-[16px] font-semibold">
-              Create Assessment
-            </DialogTitle>
-            <p className="text-[12px] text-[#8a8a8a]">
-              Set up a new assessment to evaluate candidates.
-            </p>
-          </DialogHeader>
+      {/* Create Assessment Modal */}
+      <CreateAssessmentModal
+        open={modalOpen}
+        saving={saving}
+        onClose={() => setModalOpen(false)}
+        onCreate={handleCreate}
+      />
 
-          <div className="space-y-5 px-5 py-5">
+      {/* Edit Assessment Modal */}
+      <EditAssessmentModal
+        open={!!editTarget}
+        assessment={editTarget}
+        orgId={orgId ?? ""}
+        onClose={() => setEditTarget(null)}
+        onUpdated={(updated) => {
+          setAssessments((prev) =>
+            prev.map((a) => (a.assessmentId === updated.assessmentId ? updated : a)),
+          );
+          setEditTarget(null);
+        }}
+      />
 
-            {/* Assessment Name */}
-            <div className="space-y-2">
-              <Label className="text-[13px] font-medium text-[#3a3a3a]">
-                Assessment Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                placeholder="e.g. Senior Software Engineer Screen"
-                value={form.name}
-                onChange={(e) => updateField("name", e.target.value)}
-                className={cn(errors.name && "border-red-400 focus-visible:border-red-400")}
-              />
-              {errors.name && (
-                <p className="text-[11px] text-red-500">{errors.name}</p>
-              )}
-            </div>
-
-            {/* Assessment Type */}
-            <div className="space-y-2">
-              <Label className="text-[13px] font-medium text-[#3a3a3a]">
-                Assessment Type <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={form.assessmentType}
-                onValueChange={(v) => updateField("assessmentType", v as AssessmentType)}
-              >
-                <SelectTrigger
-                  className={cn(errors.assessmentType && "border-red-400")}
-                >
-                  <SelectValue placeholder="Select a type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ASSESSMENT_TYPES.map((type) => (
-                    <SelectItem key={type} value={type} className="text-[13px]">
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.assessmentType && (
-                <p className="text-[11px] text-red-500">{errors.assessmentType}</p>
-              )}
-            </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <Label className="text-[13px] font-medium text-[#3a3a3a]">
-                Description{" "}
-                <span className="text-[12px] font-normal text-[#9a9a9a]">(optional)</span>
-              </Label>
-              <Textarea
-                placeholder="Describe the purpose and scope of this assessment..."
-                className="min-h-[100px] resize-none"
-                maxLength={500}
-                value={form.description}
-                onChange={(e) => updateField("description", e.target.value)}
-              />
-              <div className="flex justify-end text-[11px] text-[#9a9a9a]">
-                {form.description.length}/500
-              </div>
-            </div>
-
-          </div>
-
-          <DialogFooter className="border-t border-neutral-200 px-5 py-4">
-            <Button variant="outline" onClick={closeModal} disabled={saving}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-[#ff5723] text-white hover:bg-[#f04d1d]"
-              onClick={handleCreate}
-              disabled={saving}
-            >
-              {saving ? "Creating..." : "Create Assessment"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
     </div>
   );
