@@ -28,7 +28,7 @@ export default function GoogleAuthButton() {
         }
 
         setAuthSession(res.data.accessToken, res.data.user);
-        router.push(res.data.hasOrganization ? "/dashboard" : "/onboarding");
+        router.push(res.data.hasOrganization ? "/bluecollar/dashboard" : "/onboarding");
       } catch (err: unknown) {
         const msg =
           err instanceof Error ? err.message : "Google sign-in failed.";

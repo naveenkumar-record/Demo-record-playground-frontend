@@ -1,0 +1,249 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Users, ClipboardList } from "lucide-react";
+import { toast } from "sonner";
+
+import { useOrg }      from "@/components/layout/orgContext";
+import { useProject }  from "@/components/layout/projectContext";
+import { useTestMode } from "@/components/layout/testModeContext";
+import { Button }      from "@/components/ui/button";
+import { Badge }       from "@/components/ui/badge";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+
+import AssignAssessmentModal from "@/components/whitecollar/assessments/AssignAssessmentModal";
+import { listOrgAssignments, type AssignmentItem } from "@/api/assessmentAssignment.api";
+import { listAssessments,  type AssessmentItem }  from "@/api/assessment.api";
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getAccessToken() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("auth_access_token") ?? "";
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+  }).format(new Date(value));
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
+function SkeletonRow() {
+  return (
+    <TableRow>
+      {[160, 140, 80, 100, 80, 80].map((w, i) => (
+        <TableCell key={i} className="px-5 py-4">
+          <div className="h-3.5 animate-pulse rounded bg-neutral-100" style={{ width: w }} />
+        </TableCell>
+      ))}
+    </TableRow>
+  );
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+function EmptyState({ onAdd }: { onAdd: () => void }) {
+  return (
+    <TableRow>
+      <TableCell colSpan={6}>
+        <div className="flex flex-col items-center justify-center gap-3 py-16">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100">
+            <Users className="h-5 w-5 text-neutral-400" />
+          </div>
+          <div className="text-center">
+            <p className="text-[13px] font-medium text-[#1f1f1f]">No assignments yet</p>
+            <p className="mt-1 text-[12px] text-[#9a9a9a]">
+              Assign an assessment to candidates to get started.
+            </p>
+          </div>
+          <Button
+            className="mt-1 h-9 gap-2 bg-[#ff5723] px-4 text-[13px] font-semibold text-white hover:bg-[#f04d1d]"
+            onClick={onAdd}
+          >
+            <Plus className="h-4 w-4" />
+            New Assignment
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export default function AssignPage() {
+  const { activeOrg }     = useOrg();
+  const { activeProject } = useProject();
+  const { isTestMode }    = useTestMode();
+
+  const orgId     = activeOrg?.orgId;
+  const projectId = activeProject?.projectId ?? undefined;
+  const mode      = isTestMode ? "test" : "live";
+
+  const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
+  const [assessments, setAssessments] = useState<AssessmentItem[]>([]);
+  const [loading,     setLoading]     = useState(false);
+  const [modalOpen,   setModalOpen]   = useState(false);
+
+  // ── Fetch assignments ───────────────────────────────────────────────────────
+
+  const fetchAssignments = useCallback(async () => {
+    if (!orgId) return;
+    setLoading(true);
+    try {
+      const res = await listOrgAssignments(orgId, getAccessToken());
+      setAssignments(res.data?.assignments ?? []);
+    } catch {
+      toast.error("Failed to load assignments");
+    } finally {
+      setLoading(false);
+    }
+  }, [orgId]);
+
+  // ── Fetch assessments (for modal dropdown) ──────────────────────────────────
+
+  const fetchAssessments = useCallback(async () => {
+    if (!orgId) return;
+    try {
+      const res = await listAssessments(orgId, 1, 100, mode, getAccessToken(), projectId);
+      setAssessments(res.data?.assessments ?? []);
+    } catch { /* silent */ }
+  }, [orgId, mode, projectId]);
+
+  useEffect(() => {
+    fetchAssignments();
+    fetchAssessments();
+  }, [fetchAssignments, fetchAssessments]);
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  const getAssessmentName = (assessmentId: string) =>
+    assessments.find((a) => a.assessmentId === assessmentId)?.name ?? assessmentId;
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+
+  return (
+    <div className="space-y-5 p-6">
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-[16px] font-semibold text-[#1f1f1f]">Assign Assessments</h1>
+          <p className="mt-0.5 text-[12px] text-[#9a9a9a]">
+            Assign assessments to candidate batches via CSV upload.
+          </p>
+        </div>
+        <Button
+          className="h-10 gap-2 bg-[#ff5723] px-5 text-[13px] font-semibold text-white hover:bg-[#f04d1d]"
+          onClick={() => setModalOpen(true)}
+        >
+          <Plus className="h-4 w-4" />
+          New Assignment
+        </Button>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-hidden rounded-md border border-neutral-200 bg-white">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-white hover:bg-white">
+              <TableHead className="h-12 px-5 text-[13px] font-medium text-[#7a7a7a]">Batch Name</TableHead>
+              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Assessment</TableHead>
+              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Tag</TableHead>
+              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Candidates</TableHead>
+              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Created</TableHead>
+              <TableHead className="pr-5 text-right text-[13px] font-medium text-[#7a7a7a]">Status</TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)
+            ) : assignments.length === 0 ? (
+              <EmptyState onAdd={() => setModalOpen(true)} />
+            ) : (
+              assignments.map((a) => (
+                <TableRow key={a.assignmentId}>
+
+                  {/* Batch name + ID */}
+                  <TableCell className="px-5 py-4">
+                    <p className="text-[13px] font-semibold text-[#1f1f1f]">{a.batchName}</p>
+                    <p className="mt-0.5 text-[11px] text-[#aaa]">{a.assignmentId}</p>
+                  </TableCell>
+
+                  {/* Assessment */}
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <ClipboardList className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+                      <span className="text-[13px] text-[#3a3a3a]">
+                        {getAssessmentName(a.assessmentId)}
+                      </span>
+                    </div>
+                  </TableCell>
+
+                  {/* Tag */}
+                  <TableCell>
+                    {a.tag ? (
+                      <span className="rounded-md bg-neutral-100 px-2 py-1 text-[12px] text-[#6a6a6a]">
+                        {a.tag}
+                      </span>
+                    ) : (
+                      <span className="text-[12px] text-[#bbb]">—</span>
+                    )}
+                  </TableCell>
+
+                  {/* Candidates count */}
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5 text-neutral-400" />
+                      <span className="text-[13px] text-[#3a3a3a]">{a.totalCandidates}</span>
+                    </div>
+                  </TableCell>
+
+                  {/* Created */}
+                  <TableCell className="text-[13px] text-[#6a6a6a]">
+                    {formatDate(a.createdAt)}
+                  </TableCell>
+
+                  {/* Status badge */}
+                  <TableCell className="pr-5 text-right">
+                    <Badge className={cn(
+                      "text-[11px] font-medium",
+                      "bg-emerald-50 text-emerald-600 hover:bg-emerald-50",
+                    )}>
+                      Active
+                    </Badge>
+                  </TableCell>
+
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+
+        {/* Footer */}
+        {assignments.length > 0 && (
+          <div className="flex items-center border-t border-neutral-200 px-5 py-4 text-[12px] text-[#7a7a7a]">
+            Showing {assignments.length} assignment{assignments.length !== 1 ? "s" : ""}
+          </div>
+        )}
+      </div>
+
+      {/* Assign Modal */}
+      <AssignAssessmentModal
+        open={modalOpen}
+        assessments={assessments}
+        orgId={orgId ?? ""}
+        getToken={getAccessToken}
+        onClose={() => setModalOpen(false)}
+        onSuccess={fetchAssignments}
+      />
+
+    </div>
+  );
+}

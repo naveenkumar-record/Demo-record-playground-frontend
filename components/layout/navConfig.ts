@@ -1,15 +1,18 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  ClipboardList,
+  FileText,
   LayoutDashboard,
   Network,
   Send,
+  UserPlus,
 } from "lucide-react";
 
 export type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
-    external?: boolean;
+  external?: boolean;
 };
 
 export type NavGroup = {
@@ -17,29 +20,57 @@ export type NavGroup = {
   items: NavItem[];
 };
 
-export const nav: NavGroup[] = [
+export const bluecollarNav: NavGroup[] = [
   {
     group: "Overview",
     items: [
-      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Dashboard", href: "/bluecollar/dashboard", icon: LayoutDashboard },
     ],
   },
   {
-    group: "Verification",
+    group: "Verification & Skills",
     items: [
-      { label: "Workflows", href: "/workflows", icon: Network },
-      // { label: "Analytics", href: "/analytics", icon: FileLineChart },
+      { label: "Workflows", href: "/bluecollar/workflows", icon: Network },
     ],
   },
   {
     group: "Developer",
     items: [
-     {
-      label: "Support",
-      href: "https://cal.com/tharunm/30min",
-      icon: Send,
-      external: true,
-    }
+      {
+        label: "Support",
+        href: "https://cal.com/tharunm/30min",
+        icon: Send,
+        external: true,
+      },
+    ],
+  },
+];
+
+export const whitecollarNav: NavGroup[] = [
+  {
+    group: "Overview",
+    items: [
+      { label: "Dashboard", href: "/whitecollar/dashboard", icon: LayoutDashboard },
+    ],
+  },
+  {
+    group: "Verification & Skills",
+    items: [
+      { label: "Workflows", href: "/whitecollar/workflows", icon: Network },
+      { label: "Assessments", href: "/whitecollar/assessments", icon: ClipboardList },
+      { label: "Assign", href: "/whitecollar/assign", icon: UserPlus },
+      { label: "Requests", href: "/whitecollar/requests", icon: FileText },
+    ],
+  },
+  {
+    group: "Developer",
+    items: [
+      {
+        label: "Support",
+        href: "https://cal.com/tharunm/30min",
+        icon: Send,
+        external: true,
+      },
     ],
   },
 ];

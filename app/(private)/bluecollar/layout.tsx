@@ -20,7 +20,7 @@ async function fetchOrganizations(): Promise<OrgData[]> {
   }
 }
 
-export default async function AppLayout({
+export default async function BluecollarLayout({
   children,
 }: {
   children: React.ReactNode;

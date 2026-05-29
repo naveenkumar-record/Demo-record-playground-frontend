@@ -3,11 +3,13 @@
 import { ArrowRightIcon, InfoIcon } from "lucide-react";
 import { useTestMode } from "./testModeContext";
 
-// Pages where the test-mode banner should appear
 const TEST_MODE_PATHS = [
-  "/dashboard",
-  "/workflows",
-  "/analytics",
+  "/bluecollar/dashboard",
+  "/bluecollar/workflows",
+  "/whitecollar/dashboard",
+  "/whitecollar/workflows",
+  "/whitecollar/assessments",
+  "/whitecollar/requests",
 ];
 
 export default function TestModeBanner({ pathname }: { pathname: string }) {

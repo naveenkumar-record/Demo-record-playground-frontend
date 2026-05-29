@@ -130,6 +130,12 @@ export const postRequest = <TData = undefined, TBody = unknown>(
   options?: RequestOptions
 ): Promise<ApiResponse<TData>> => request<TData>("POST", path, body, options);
 
+export const putRequest = <TData = undefined, TBody = unknown>(
+  path: string,
+  body?: TBody,
+  options?: RequestOptions
+): Promise<ApiResponse<TData>> => request<TData>("PUT", path, body, options);
+
 export const patchRequest = <TData = undefined, TBody = unknown>(
   path: string,
   body?: TBody,

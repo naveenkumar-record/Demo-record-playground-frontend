@@ -153,7 +153,7 @@ export default function DashboardPage() {
           <Button
             variant="outline"
             className="h-8 rounded-md px-3 text-[12px]"
-            onClick={() => router.push("/workflows")}
+            onClick={() => router.push("/bluecollar/workflows")}
           >
             View all
           </Button>
