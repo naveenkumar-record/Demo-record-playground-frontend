@@ -31,9 +31,10 @@ export type OrgMembersData = {
 export type InviteRole = "superadmin" | "reader";
 
 /** Fetch all orgs the current user belongs to (owned + invited) */
-export const getUserOrganizations = (accessToken: string) =>
+export const getUserOrganizations = (userIdOrToken: string, accessToken?: string) =>
   getRequest<{ organizations: OrgData[] }>(apiPathConstants.userAccess.organizations, {
-    accessToken,
+    accessToken: accessToken ?? userIdOrToken,
+    params: accessToken ? { userId: userIdOrToken } : undefined,
   });
 
 /** Fetch all members for a specific org */

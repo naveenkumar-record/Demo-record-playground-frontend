@@ -12,8 +12,12 @@ export type WorkflowItem = {
   totalRequests: number;
   totalVerifications: number;
   verifiedCount: number;
+  notAttempted: number;
+  inProgress: number;
+  expired: number;
   completionPercent: number;
   workflowType: string;
+  jobDescription?: string;
   skillIds: string[];
   verificationMethod: "text" | "voice" | "video";
   createdAt: string;
@@ -41,11 +45,18 @@ export type CreateWorkflowPayload = {
   orgId: string;
   name: string;
   workflowType: string;
+  jobTitle?: string;
+  roleType?: string;
+  experienceRange?: string;
+  salary?: string;
+  location?: string;
+  jobDescription?: string;
   startMessage: string;
   completionMessage: string;
   skillIds: string[];
   verificationMethod: "text" | "voice" | "video";
   mode: "test" | "live";
+  language?: "tamil" | "english" | "kannada";
   projectId?: string;
 };
 
@@ -94,5 +105,26 @@ export const createWorkflow = (
   postRequest<{ workflow: WorkflowItem }, CreateWorkflowPayload>(
     apiPathConstants.workflows.base,
     payload,
+    { accessToken },
+  );
+
+export type WorkflowCandidatePayload = {
+  name: string;
+  phoneNumber: string;
+  role?: string;
+};
+
+export const createWorkflowCandidates = (
+  workflowId: string,
+  candidates: WorkflowCandidatePayload[],
+  accessToken: string,
+  language?: string,
+) =>
+  postRequest<
+    { candidates: unknown[] },
+    { candidates: WorkflowCandidatePayload[]; language?: string }
+  >(
+    `${apiPathConstants.workflows.base}/${workflowId}/candidates`,
+    { candidates, language },
     { accessToken },
   );

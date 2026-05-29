@@ -7,13 +7,13 @@ import AppShell from "@/components/layout/appShell";
 import Header from "@/components/layout/header";
 import { cookies } from "next/headers";
 
-async function fetchOrganizations(): Promise<OrgData[]> {
+async function fetchOrganizations(userId: string): Promise<OrgData[]> {
   try {
     const cookieStore = await cookies();
     const accessToken = cookieStore.get("auth_token")?.value;
-    if (!accessToken) return [];
+    if (!accessToken || !userId) return [];
 
-    const orgsRes = await getUserOrganizations(accessToken);
+    const orgsRes = await getUserOrganizations(userId, accessToken);
     return orgsRes.data?.organizations ?? [];
   } catch {
     return [];
@@ -25,10 +25,8 @@ export default async function BluecollarLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [user, organizations] = await Promise.all([
-    getServerSessionUser(),
-    fetchOrganizations(),
-  ]);
+  const user = await getServerSessionUser();
+  const organizations = await fetchOrganizations(user?.userId ?? "");
 
   const email = user?.email ?? "";
   const userInitial = email.charAt(0).toUpperCase() || "U";

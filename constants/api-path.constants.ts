@@ -51,6 +51,9 @@ const apiPathConstants = {
   projects: {
     base: "/projects",
   },
+  bluecollar: {
+    requests: "/bluecollar/requests",
+  },
   assessments: {
     base:       "/assessments",
     byId:       (id: string) => `/assessments/${id}`,
