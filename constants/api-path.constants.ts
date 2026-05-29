@@ -51,14 +51,20 @@ const apiPathConstants = {
   projects: {
     base: "/projects",
   },
+  bluecollar: {
+    requests: "/bluecollar/requests",
+  },
   assessments: {
-    base:     "/assessments",
-    byId:     (id: string) => `/assessments/${id}`,
-    sections: (id: string) => `/assessments/${id}/sections`,
-    coding:   (id: string) => `/assessments/${id}/coding`,
-    publish:  (id: string) => `/assessments/${id}/publish`,
-    toggle:   (id: string) => `/assessments/${id}/toggle`,
-    delete:   (id: string) => `/assessments/${id}`,
+    base:       "/assessments",
+    byId:       (id: string) => `/assessments/${id}`,
+    sections:   (id: string) => `/assessments/${id}/sections`,
+    coding:     (id: string) => `/assessments/${id}/coding`,
+    publish:    (id: string) => `/assessments/${id}/publish`,
+    toggle:     (id: string) => `/assessments/${id}/toggle`,
+    delete:     (id: string) => `/assessments/${id}`,
+    questions:  (id: string) => `/assessments/${id}/questions`,
+    questionById: (assessmentId: string, questionId: string) =>
+      `/assessments/${assessmentId}/questions/${questionId}`,
   },
 } as const;
 

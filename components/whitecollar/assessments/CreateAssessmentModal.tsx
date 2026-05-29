@@ -43,14 +43,8 @@ function getAccessToken() {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const ROLE_TYPES = ["Technical", "Non-technical"];
-const EXPERIENCE_RANGES = [
-  "0–1 years",
-  "1–3 years",
-  "3–5 years",
-  "5–8 years",
-  "8+ years",
-];
+const ROLE_TYPES        = ["IT", "NON-IT"];
+const EXPERIENCE_RANGES = ["0–1 years", "1–3 years", "3–5 years", "5–8 years", "8+ years"];
 const QUESTION_SET_TYPES = ["Same For All", "Different For All"];
 const DIFFICULTIES = ["Easy", "Medium", "Hard", "Expert"];
 

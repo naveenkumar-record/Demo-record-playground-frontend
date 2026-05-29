@@ -44,7 +44,7 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
           type="button"
           onClick={() => router.push("/bluecollar/dashboard")}
           className={cn(
-            "flex-1 rounded-md py-1.5 text-[13px] font-medium transition-colors",
+            "flex-1 cursor-pointer rounded-md py-1.5 text-[13px] font-medium transition-colors",
             isWhitecollar
               ? "text-neutral-500 hover:bg-neutral-200"
               : "bg-white text-[#1f1f1f] shadow-sm",

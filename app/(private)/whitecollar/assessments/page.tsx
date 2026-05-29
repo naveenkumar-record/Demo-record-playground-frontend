@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import CreateAssessmentModal, {
   type CreateAssessmentResult,
 } from "@/components/whitecollar/assessments/CreateAssessmentModal";
+import EditAssessmentModal from "@/components/whitecollar/assessments/EditAssessmentModal";
 
 import {
   listAssessments,
@@ -117,7 +118,7 @@ export default function AssessmentsPage() {
 
   const orgId = activeOrg?.orgId;
   const projectId = activeProject?.projectId ?? undefined;
-  const mode = isTestMode ? "test" : "live";
+  const mode      = (isTestMode ? "test" : "live") as "test" | "live";
 
   // ── Data state ──────────────────────────────────────────────────────────────
   const [assessments, setAssessments] = useState<AssessmentItem[]>([]);
@@ -125,34 +126,40 @@ export default function AssessmentsPage() {
   const [loading, setLoading] = useState(false);
 
   // ── Modal state ─────────────────────────────────────────────────────────────
-  const [modalOpen, setModalOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [modalOpen,  setModalOpen]  = useState(false);
+  const [saving,     setSaving]     = useState(false);
+  const [editTarget, setEditTarget] = useState<AssessmentItem | null>(null);
 
   // ── Fetch ───────────────────────────────────────────────────────────────────
 
-  const fetchKeyRef = useRef("");
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchAssessments = useCallback(async () => {
     if (!orgId) return;
 
-    const key = `${orgId}|${mode}|${projectId ?? ""}`;
-    fetchKeyRef.current = key;
+    // Cancel any in-flight request before starting a new one
+    abortRef.current?.abort();
+    const controller  = new AbortController();
+    abortRef.current  = controller;
 
     setLoading(true);
     try {
       const token = getAccessToken();
-      const res = await listAssessments(orgId, 1, 50, mode, token, projectId);
-      if (fetchKeyRef.current !== key) return; // stale response guard
-
-      setAssessments(res.data?.assessments ?? []);
-      setTotal(res.data?.pagination.total ?? 0);
-    } catch (err: unknown) {
-      if (fetchKeyRef.current !== key) return;
-      toast.error(
-        err instanceof Error ? err.message : "Failed to load assessments",
+      const res   = await listAssessments(
+        orgId, 1, 100, mode, token, projectId, controller.signal,
       );
+      if (!controller.signal.aborted) {
+        setAssessments(res.data?.assessments ?? []);
+        setTotal(res.data?.pagination.total ?? 0);
+      }
+    } catch (err: unknown) {
+      if (!controller.signal.aborted) {
+        toast.error(err instanceof Error ? err.message : "Failed to fetch assessments");
+      }
     } finally {
-      if (fetchKeyRef.current === key) setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [orgId, mode, projectId]);
 
@@ -334,7 +341,12 @@ export default function AssessmentsPage() {
                   {/* Actions */}
                   <TableCell className="pr-5">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setEditTarget(assessment)}
+                      >
                         <Pencil className="h-4 w-4 text-[#697282]" />
                       </Button>
                       <DropdownMenu>
@@ -398,6 +410,22 @@ export default function AssessmentsPage() {
         onClose={() => setModalOpen(false)}
         onCreate={handleCreate}
       />
+
+      {/* Edit Assessment Modal */}
+      <EditAssessmentModal
+        open={!!editTarget}
+        assessment={editTarget}
+        orgId={orgId ?? ""}
+        onClose={() => setEditTarget(null)}
+        onUpdated={(updated) => {
+          setAssessments((prev) =>
+            prev.map((a) => (a.assessmentId === updated.assessmentId ? updated : a)),
+          );
+          setEditTarget(null);
+        }}
+      />
+
+
     </div>
   );
 }
