@@ -4,17 +4,19 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   ClipboardList,
   MoreVertical,
+  Pause,
   Pencil,
+  Play,
   Plus,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useOrg }      from "@/components/layout/orgContext";
-import { useProject }  from "@/components/layout/projectContext";
+import { useOrg } from "@/components/layout/orgContext";
+import { useProject } from "@/components/layout/projectContext";
 import { useTestMode } from "@/components/layout/testModeContext";
-import { Badge }       from "@/components/ui/badge";
-import { Button }      from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,7 +88,9 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
             <ClipboardList className="h-5 w-5 text-neutral-400" />
           </div>
           <div className="text-center">
-            <p className="text-[13px] font-medium text-[#1f1f1f]">No assessments yet</p>
+            <p className="text-[13px] font-medium text-[#1f1f1f]">
+              No assessments yet
+            </p>
             <p className="mt-1 text-[12px] text-[#9a9a9a]">
               Create your first assessment to start evaluating candidates.
             </p>
@@ -107,22 +111,22 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AssessmentsPage() {
-  const { activeOrg }                                         = useOrg();
-  const { activeProject }                                     = useProject();
-  const { isTestMode }                                        = useTestMode();
+  const { activeOrg } = useOrg();
+  const { activeProject } = useProject();
+  const { isTestMode } = useTestMode();
 
-  const orgId     = activeOrg?.orgId;
+  const orgId = activeOrg?.orgId;
   const projectId = activeProject?.projectId ?? undefined;
-  const mode      = isTestMode ? "test" : "live";
+  const mode = isTestMode ? "test" : "live";
 
   // ── Data state ──────────────────────────────────────────────────────────────
   const [assessments, setAssessments] = useState<AssessmentItem[]>([]);
-  const [total, setTotal]             = useState(0);
-  const [loading, setLoading]         = useState(false);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   // ── Modal state ─────────────────────────────────────────────────────────────
   const [modalOpen, setModalOpen] = useState(false);
-  const [saving,    setSaving]    = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // ── Fetch ───────────────────────────────────────────────────────────────────
 
@@ -137,48 +141,54 @@ export default function AssessmentsPage() {
     setLoading(true);
     try {
       const token = getAccessToken();
-      const res   = await listAssessments(orgId, 1, 50, mode, token, projectId);
-      if (fetchKeyRef.current !== key) return;          // stale response guard
+      const res = await listAssessments(orgId, 1, 50, mode, token, projectId);
+      if (fetchKeyRef.current !== key) return; // stale response guard
 
       setAssessments(res.data?.assessments ?? []);
       setTotal(res.data?.pagination.total ?? 0);
     } catch (err: unknown) {
       if (fetchKeyRef.current !== key) return;
-      toast.error(err instanceof Error ? err.message : "Failed to load assessments");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to load assessments",
+      );
     } finally {
       if (fetchKeyRef.current === key) setLoading(false);
     }
   }, [orgId, mode, projectId]);
 
-  useEffect(() => { fetchAssessments(); }, [fetchAssessments]);
+  useEffect(() => {
+    fetchAssessments();
+  }, [fetchAssessments]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
   // Returns assessmentId so modal can navigate (custom flow) or show success (AI flow)
-  const handleCreate = async (data: CreateAssessmentResult): Promise<string | undefined> => {
+  const handleCreate = async (
+    data: CreateAssessmentResult,
+  ): Promise<string | undefined> => {
     if (!orgId) return undefined;
     setSaving(true);
     try {
       const token = getAccessToken();
-      const res   = await createAssessment(
+      const res = await createAssessment(
         {
           orgId,
           mode,
           projectId,
-          name:            data.name,
-          assessmentType:  data.assessmentType,
-          description:     data.description,
-          creationMethod:  data.creationMethod,
-          jobTitle:        data.jobTitle,
-          jobDescription:  data.jobDescription,
-          roleType:        data.roleType,
+          name: data.name,
+          assessmentType: data.assessmentType,
+          description: data.description,
+          creationMethod: data.creationMethod,
+          jobTitle: data.jobTitle,
+          jobDescription: data.jobDescription,
+          roleType: data.roleType,
           experienceRange: data.experienceRange,
-          skills:          data.skills,
+          skills: data.skills,
           questionSetType: data.questionSetType,
-          totalMarks:      data.totalMarks,
-          passMarks:       data.passMarks,
-          duration:        data.duration,
-          difficulty:      data.difficulty,
+          totalMarks: data.totalMarks,
+          passMarks: data.passMarks,
+          duration: data.duration,
+          difficulty: data.difficulty,
         },
         token,
       );
@@ -191,7 +201,9 @@ export default function AssessmentsPage() {
       }
       return newItem?.assessmentId;
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to create assessment");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create assessment",
+      );
       return undefined;
     } finally {
       setSaving(false);
@@ -202,7 +214,7 @@ export default function AssessmentsPage() {
     if (!orgId) return;
     try {
       const token = getAccessToken();
-      const res   = await toggleAssessmentActive(assessmentId, orgId, token);
+      const res = await toggleAssessmentActive(assessmentId, orgId, token);
       const updated = res.data?.assessment;
       if (updated) {
         setAssessments((prev) =>
@@ -210,20 +222,26 @@ export default function AssessmentsPage() {
         );
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to update assessment");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update assessment",
+      );
     }
   };
 
   const handleDelete = async (assessmentId: string) => {
     if (!orgId) return;
     // Optimistic remove
-    setAssessments((prev) => prev.filter((a) => a.assessmentId !== assessmentId));
+    setAssessments((prev) =>
+      prev.filter((a) => a.assessmentId !== assessmentId),
+    );
     try {
       const token = getAccessToken();
       await deleteAssessmentApi(assessmentId, orgId, token);
       toast.success("Assessment deleted");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete assessment");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to delete assessment",
+      );
       fetchAssessments(); // restore on error
     }
   };
@@ -232,10 +250,11 @@ export default function AssessmentsPage() {
 
   return (
     <div className="space-y-5 p-6">
-
       {/* Page header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-[16px] font-semibold text-[#1f1f1f]">Assessments</h1>
+        <h1 className="text-[16px] font-semibold text-[#1f1f1f]">
+          Assessments
+        </h1>
         <Button
           className="h-10 gap-2 bg-[#ff5723] px-5 text-[13px] font-semibold text-white hover:bg-[#f04d1d]"
           onClick={() => setModalOpen(true)}
@@ -253,9 +272,15 @@ export default function AssessmentsPage() {
               <TableHead className="h-12 px-5 text-[13px] font-medium text-[#7a7a7a]">
                 Assessment Name
               </TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Type</TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Status</TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Created</TableHead>
+              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
+                Type
+              </TableHead>
+              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
+                Status
+              </TableHead>
+              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
+                Created
+              </TableHead>
               <TableHead className="pr-5 text-right text-[13px] font-medium text-[#7a7a7a]">
                 Actions
               </TableHead>
@@ -270,7 +295,6 @@ export default function AssessmentsPage() {
             ) : (
               assessments.map((assessment) => (
                 <TableRow key={assessment.assessmentId}>
-
                   {/* Name + ID */}
                   <TableCell className="px-5 py-4">
                     <p className="text-[13px] font-semibold text-[#1f1f1f]">
@@ -315,29 +339,41 @@ export default function AssessmentsPage() {
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <MoreVertical className="h-4 w-4 text-[#697282]" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44">
                           <DropdownMenuItem
-                            className="text-[13px]"
-                            onClick={() => handleToggleActive(assessment.assessmentId)}
+                            className="gap-2 text-[13px] text-[#3f4652] px-[12px] py-[10px]"
+                            onClick={() =>
+                              handleToggleActive(assessment.assessmentId)
+                            }
                           >
+                            {assessment.isActive ? (
+                              <Pause className="h-3.5 w-3.5 text-[#697282]" />
+                            ) : (
+                              <Play className="h-3.5 w-3.5 text-[#697282]" />
+                            )}
                             {assessment.isActive ? "Pause" : "Activate"}
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            className="text-[13px] text-red-500 focus:text-red-500"
-                            onClick={() => handleDelete(assessment.assessmentId)}
+                            className="gap-2 text-[13px] text-red-500 focus:text-red-500 px-[12px] py-[10px]"
+                            onClick={() =>
+                              handleDelete(assessment.assessmentId)
+                            }
                           >
-                            <Trash2 className="mr-2 h-3.5 w-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" />
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                   </TableCell>
-
                 </TableRow>
               ))
             )}
@@ -348,8 +384,8 @@ export default function AssessmentsPage() {
         {assessments.length > 0 && (
           <div className="flex items-center justify-between border-t border-neutral-200 px-5 py-4 text-[12px] text-[#7a7a7a]">
             <p>
-              Showing {assessments.length} of {total}{" "}
-              Assessment{total === 1 ? "" : "s"}
+              Showing {assessments.length} of {total} Assessment
+              {total === 1 ? "" : "s"}
             </p>
           </div>
         )}
@@ -362,8 +398,6 @@ export default function AssessmentsPage() {
         onClose={() => setModalOpen(false)}
         onCreate={handleCreate}
       />
-
-
     </div>
   );
 }
