@@ -1,4 +1,4 @@
-import { getRequest } from "@/config/http.config";
+import { getRequest, postRequest } from "@/config/http.config";
 import apiPathConstants from "@/constants/api-path.constants";
 
 // ── shared types ───────────────────────────────────────────────────────────────
@@ -117,4 +117,68 @@ export const getRequestDetail = (
   getRequest<RequestDetail>(
     `${apiPathConstants.bluecollar.requests}/${encodeURIComponent(candidateId)}`,
     { accessToken, signal },
+  );
+
+// ── logs ───────────────────────────────────────────────────────────────────────
+
+export type WhatsAppDeliveryStatus = "link_delivered" | "sent" | "failed" | "queued";
+
+export type LogItem = {
+  candidateId: string;
+  candidateName: string;
+  phoneNumber: string;
+  role: string;
+  workflowId: string;
+  workflowName: string;
+  language: string;
+  whatsappStatus: WhatsAppDeliveryStatus;
+  deliveryError: string;
+  sentAt: string | null;
+  linkSentAt: string | null;
+  createdAt: string;
+};
+
+export type LogListResponse = {
+  logs: LogItem[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
+export type LogFilters = {
+  workflowId?: string;
+  whatsappStatus?: string;
+};
+
+export const listLogs = (
+  orgId: string,
+  page: number,
+  limit: number,
+  accessToken: string,
+  filters?: LogFilters,
+  signal?: AbortSignal,
+) => {
+  const params: Record<string, string> = {
+    orgId,
+    page: String(page),
+    limit: String(limit),
+  };
+  if (filters?.workflowId)     params.workflowId     = filters.workflowId;
+  if (filters?.whatsappStatus) params.whatsappStatus = filters.whatsappStatus;
+
+  return getRequest<LogListResponse>(apiPathConstants.bluecollar.logs, {
+    accessToken,
+    signal,
+    params,
+  });
+};
+
+export const resendLog = (candidateId: string, accessToken: string) =>
+  postRequest<{ wamid: string }, Record<string, never>>(
+    `${apiPathConstants.bluecollar.logs}/${encodeURIComponent(candidateId)}/resend`,
+    {},
+    { accessToken },
   );
