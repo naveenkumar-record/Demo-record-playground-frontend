@@ -1128,6 +1128,7 @@ export default function WorkflowPage() {
                       <SelectItem value="english">English</SelectItem>
                       <SelectItem value="tamil">Tamil</SelectItem>
                       <SelectItem value="kannada">Kannada</SelectItem>
+                      <SelectItem value="hindi">Hindi</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

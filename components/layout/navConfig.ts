@@ -4,6 +4,7 @@ import {
   FileText,
   LayoutDashboard,
   Network,
+  ScrollText,
   Send,
   Settings,
   UserPlus,
@@ -33,6 +34,7 @@ export const bluecollarNav: NavGroup[] = [
     items: [
       { label: "Workflows", href: "/bluecollar/workflows", icon: Network },
       { label: "Requests", href: "/bluecollar/requests", icon: ClipboardList },
+      { label: "Logs", href: "/bluecollar/logs", icon: ScrollText },
     ],
   },
   {
