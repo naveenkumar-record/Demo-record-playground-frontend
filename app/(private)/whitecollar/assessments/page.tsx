@@ -114,36 +114,48 @@ export default function AssessmentsPage() {
 
   const orgId     = activeOrg?.orgId;
   const projectId = activeProject?.projectId ?? undefined;
-  const mode      = isTestMode ? "test" : "live";
+  const mode      = (isTestMode ? "test" : "live") as "test" | "live";
 
   // ── Data state ──────────────────────────────────────────────────────────────
   const [assessments, setAssessments] = useState<AssessmentItem[]>([]);
-  const [total, setTotal]             = useState(0);
-  const [loading, setLoading]         = useState(false);
+  const [total,       setTotal]       = useState(0);
+  const [loading,     setLoading]     = useState(false);
 
-  // Modal
-  const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm]           = useState<CreateAssessmentForm>(emptyForm());
-  const [errors, setErrors]       = useState<Partial<Record<keyof CreateAssessmentForm, string>>>({});
-  const [saving, setSaving]       = useState(false);
+  // ── Modal state ─────────────────────────────────────────────────────────────
+  const [modalOpen,  setModalOpen]  = useState(false);
+  const [saving,     setSaving]     = useState(false);
+  const [editTarget, setEditTarget] = useState<AssessmentItem | null>(null);
 
   // ── Fetch ───────────────────────────────────────────────────────────────────
 
-  const fetchKeyRef = useRef("");
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchAssessments = useCallback(async () => {
     if (!orgId) return;
 
-    const key = `${orgId}|${mode}|${projectId ?? ""}`;
-    fetchKeyRef.current = key;
+    // Cancel any in-flight request before starting a new one
+    abortRef.current?.abort();
+    const controller  = new AbortController();
+    abortRef.current  = controller;
 
-  const validate = (): boolean => {
-    const e: Partial<Record<keyof CreateAssessmentForm, string>> = {};
-    if (!form.name.trim())          e.name           = "Assessment name is required";
-    if (!form.assessmentType)       e.assessmentType  = "Please select a type";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-      if (fetchKeyRef.current === key) setLoading(false);
+    setLoading(true);
+    try {
+      const token = getAccessToken();
+      const res   = await listAssessments(
+        orgId, 1, 100, mode, token, projectId, controller.signal,
+      );
+      if (!controller.signal.aborted) {
+        setAssessments(res.data?.assessments ?? []);
+        setTotal(res.data?.pagination.total ?? 0);
+      }
+    } catch (err: unknown) {
+      if (!controller.signal.aborted) {
+        toast.error(err instanceof Error ? err.message : "Failed to fetch assessments");
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [orgId, mode, projectId]);
 
