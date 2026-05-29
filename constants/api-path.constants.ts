@@ -53,6 +53,7 @@ const apiPathConstants = {
   },
   bluecollar: {
     requests: "/bluecollar/requests",
+    logs: "/bluecollar/logs",
   },
   assessments: {
     base:       "/assessments",
