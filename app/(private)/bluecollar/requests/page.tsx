@@ -20,7 +20,7 @@ import { useOrg } from "@/components/layout/orgContext";
 import { getAccessToken } from "@/lib/auth-client";
 import { toast } from "sonner";
 
-const PAGE_LIMIT = 20;
+const PAGE_LIMIT = 10;
 
 // ── status/trust options ───────────────────────────────────────────────────────
 
@@ -478,29 +478,76 @@ export default function RequestsPage() {
               ? "Loading..."
               : `Showing ${currentFrom}–${currentTo} of ${total} Candidate${total === 1 ? "" : "s"}`}
           </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={page <= 1 || loading}
-              className="cursor-pointer text-[13px]"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              &lsaquo; Previous
-            </Button>
-            <span className="rounded-md border border-neutral-200 px-3 py-1 text-[#1f1f1f]">
-              {page}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={page >= totalPages || loading}
-              className="cursor-pointer text-[13px]"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            >
-              Next &rsaquo;
-            </Button>
-          </div>
+
+          {/* Numbered pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              {/* Previous */}
+              <button
+                type="button"
+                disabled={page <= 1 || loading}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-[13px] transition-colors",
+                  page <= 1 || loading
+                    ? "cursor-not-allowed text-neutral-300"
+                    : "text-[#4a4a4a] hover:bg-neutral-100",
+                )}
+              >
+                ‹ Previous
+              </button>
+
+              {/* Page numbers with ellipsis */}
+              {(() => {
+                const pages: (number | "…")[] = [];
+                if (totalPages <= 5) {
+                  for (let i = 1; i <= totalPages; i++) pages.push(i);
+                } else {
+                  pages.push(1);
+                  if (page > 3) pages.push("…");
+                  for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
+                    pages.push(i);
+                  }
+                  if (page < totalPages - 2) pages.push("…");
+                  pages.push(totalPages);
+                }
+                return pages.map((p, idx) =>
+                  p === "…" ? (
+                    <span key={`ellipsis-${idx}`} className="px-1 text-neutral-400">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPage(p)}
+                      className={cn(
+                        "h-8 min-w-[32px] rounded-md px-2 text-[13px] transition-colors",
+                        p === page
+                          ? "bg-[#ff5723] font-semibold text-white"
+                          : "text-[#4a4a4a] hover:bg-neutral-100",
+                      )}
+                    >
+                      {p}
+                    </button>
+                  ),
+                );
+              })()}
+
+              {/* Next */}
+              <button
+                type="button"
+                disabled={page >= totalPages || loading}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-[13px] transition-colors",
+                  page >= totalPages || loading
+                    ? "cursor-not-allowed text-neutral-300"
+                    : "text-[#4a4a4a] hover:bg-neutral-100",
+                )}
+              >
+                Next ›
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

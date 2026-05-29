@@ -48,12 +48,15 @@ export type CreateWorkflowPayload = {
   jobTitle?: string;
   roleType?: string;
   experienceRange?: string;
+  salary?: string;
+  location?: string;
   jobDescription?: string;
   startMessage: string;
   completionMessage: string;
   skillIds: string[];
   verificationMethod: "text" | "voice" | "video";
   mode: "test" | "live";
+  language?: "tamil" | "english" | "kannada";
   projectId?: string;
 };
 
@@ -115,12 +118,13 @@ export const createWorkflowCandidates = (
   workflowId: string,
   candidates: WorkflowCandidatePayload[],
   accessToken: string,
+  language?: string,
 ) =>
   postRequest<
     { candidates: unknown[] },
-    { candidates: WorkflowCandidatePayload[] }
+    { candidates: WorkflowCandidatePayload[]; language?: string }
   >(
     `${apiPathConstants.workflows.base}/${workflowId}/candidates`,
-    { candidates },
+    { candidates, language },
     { accessToken },
   );

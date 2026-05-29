@@ -21,18 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const ROLE_OPTIONS = [
-  "Picker and Packer",
-  "Warehouse Staff",
-  "Delivery Executive",
-  "Machine Operator",
-  "Security Guard",
-  "Driver",
-  "Housekeeping Staff",
-  "Field Executive",
-  "Loader / Unloader",
-  "Factory Worker",
-];
 import { toast } from "sonner";
 
 import {
@@ -106,6 +94,9 @@ function emptyForm(): CreateWorkflowPayload {
     jobTitle: "",
     roleType: "",
     experienceRange: "",
+    salary: "",
+    location: "",
+    language: "english",
     jobDescription: "",
     startMessage: "",
     completionMessage: "",
@@ -138,7 +129,7 @@ export default function WorkflowPage() {
   const [currentManualPhone, setCurrentManualPhone] = useState("");
   const [currentManualRole, setCurrentManualRole] = useState("");
   const [requestRole, setRequestRole] = useState("");
-  const [requestLanguage, setRequestLanguage] = useState("Tamil");
+  const [requestLanguage, setRequestLanguage] = useState("english");
   const [requestLinkExpiry, setRequestLinkExpiry] = useState("7 Days");
   const [csvCandidates, setCsvCandidates] = useState<{ name: string; phoneNumber: string; role?: string }[]>([]);
   const [sendingRequest, setSendingRequest] = useState(false);
@@ -329,7 +320,8 @@ export default function WorkflowPage() {
 
   const addManualCandidate = () => {
     if (!currentManualName.trim()) { toast.error("Candidate name is required"); return; }
-    if (currentManualPhone.replace(/[^\d]/g, "").length < 8) { toast.error("Valid phone number is required"); return; }
+    if (currentManualPhone.replace(/[^\d]/g, "").length !== 10) { toast.error("Phone number must be exactly 10 digits"); return; }
+    if (!currentManualRole.trim()) { toast.error("Role is required"); return; }
     setManualCandidates((prev) => [
       ...prev,
       { id: String(Date.now()), name: currentManualName.trim(), phoneNumber: currentManualPhone, role: currentManualRole },
@@ -384,7 +376,7 @@ export default function WorkflowPage() {
 
     setSendingRequest(true);
     try {
-      await createWorkflowCandidates(requestWorkflow.workflowId, candidates, token);
+      await createWorkflowCandidates(requestWorkflow.workflowId, candidates, token, requestLanguage);
       setRequestOpen(false);
       setRequestSuccessOpen(true);
     } catch (error: unknown) {
@@ -618,6 +610,64 @@ export default function WorkflowPage() {
                       <SelectItem value="5+ Years">5+ Years</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[13px] text-[#6a6a6a]">Salary</Label>
+                  <div className="flex overflow-hidden rounded-lg border">
+                    <span className="grid w-9 shrink-0 place-items-center bg-neutral-100 text-[13px] text-[#7a7a7a]">₹</span>
+                    <Input
+                      className="rounded-none border-0"
+                      value={form.salary ?? ""}
+                      placeholder="eg: 15,000 - 25,000/month"
+                      onChange={(e) => updateForm("salary", e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[13px] text-[#6a6a6a]">Location</Label>
+                  <Input
+                    value={form.location ?? ""}
+                    placeholder="eg: Chennai, Mumbai"
+                    onChange={(e) => updateForm("location", e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[13px] text-[#6a6a6a]">WhatsApp Message Language <span className="text-[#ff5723]">*</span></Label>
+                <p className="text-[11px] text-[#9a9a9a]">Language used to send the WhatsApp verification message to candidates.</p>
+                <div className="flex gap-3">
+                  {(["english", "tamil", "kannada"] as const).map((lang) => {
+                    const label = lang.charAt(0).toUpperCase() + lang.slice(1);
+                    const disabled = false;
+                    const selected = (form.language ?? "tamil") === lang;
+                    return (
+                      <button
+                        key={lang}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => !disabled && updateForm("language", lang)}
+                        className={cn(
+                          "flex-1 rounded-lg border px-3 py-2.5 text-[13px] font-medium transition-colors",
+                          disabled
+                            ? "cursor-not-allowed border-neutral-200 bg-neutral-50 text-[#aaaaaa]"
+                            : selected
+                            ? "border-[#ff5723] bg-orange-50 text-[#ff5723]"
+                            : "border-neutral-200 bg-white text-[#4a4a4a] hover:bg-neutral-50",
+                        )}
+                      >
+                        {label}
+                        {disabled && (
+                          <span className="ml-1.5 rounded-full bg-neutral-200 px-1.5 py-0.5 text-[9px] font-medium text-[#8a8a8a]">
+                            Soon
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -907,22 +957,24 @@ export default function WorkflowPage() {
                           <Label className="text-[13px]">Phone Number <span className="text-[#ff5723]">*</span></Label>
                           <div className="flex overflow-hidden rounded-lg border">
                             <span className="grid w-12 shrink-0 place-items-center bg-neutral-100 text-[13px] text-[#7a7a7a]">+91</span>
-                            <Input className="rounded-none border-0" value={currentManualPhone} placeholder="6380099916" onChange={(e) => setCurrentManualPhone(e.target.value)} />
+                            <Input
+                              className="rounded-none border-0"
+                              value={currentManualPhone}
+                              placeholder="6380099916"
+                              maxLength={10}
+                              inputMode="numeric"
+                              onChange={(e) => setCurrentManualPhone(e.target.value.replace(/[^\d]/g, "").slice(0, 10))}
+                            />
                           </div>
                         </div>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[13px]">Role being verified <span className="text-[#ff5723]">*</span></Label>
-                        <Select value={currentManualRole} onValueChange={setCurrentManualRole}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ROLE_OPTIONS.map((role) => (
-                              <SelectItem key={role} value={role}>{role}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Input
+                          value={currentManualRole}
+                          placeholder="eg: Picker and Packer, Driver, Security Guard"
+                          onChange={(e) => setCurrentManualRole(e.target.value)}
+                        />
                       </div>
                       <div className="flex justify-end gap-2 pt-1">
                         <Button
@@ -966,16 +1018,11 @@ export default function WorkflowPage() {
 
                     <div className="space-y-1.5">
                       <Label className="text-[13px]">Role being verified <span className="text-[#ff5723]">*</span></Label>
-                      <Select value={requestRole} onValueChange={setRequestRole}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ROLE_OPTIONS.map((role) => (
-                            <SelectItem key={role} value={role}>{role}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        value={requestRole}
+                        placeholder="eg: Picker and Packer, Driver, Security Guard"
+                        onChange={(e) => setRequestRole(e.target.value)}
+                      />
                     </div>
 
                     {csvCandidates.length === 0 ? (
@@ -1092,29 +1139,31 @@ export default function WorkflowPage() {
                 {/* Role being verified */}
                 <div className="space-y-1.5">
                   <Label className="text-[13px]">Role being verified <span className="text-[#ff5723]">*</span></Label>
-                  <Select value={requestRole} onValueChange={setRequestRole}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLE_OPTIONS.map((role) => (
-                        <SelectItem key={role} value={role}>{role}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    value={requestRole}
+                    placeholder="eg: Picker and Packer, Driver, Security Guard"
+                    onChange={(e) => setRequestRole(e.target.value)}
+                  />
                 </div>
 
                 {/* Language */}
                 <div className="space-y-1.5">
                   <Label className="text-[13px]">Language for this batch <span className="text-[#ff5723]">*</span></Label>
-                  <Select value={requestLanguage} onValueChange={setRequestLanguage}>
+                  <Select
+                    value={requestLanguage || "english"}
+                    onValueChange={setRequestLanguage}
+                  >
                     <SelectTrigger className="w-full">
-                      <SelectValue />
+                      <SelectValue>
+                        {requestLanguage
+                          ? requestLanguage.charAt(0).toUpperCase() + requestLanguage.slice(1)
+                          : "Select language"}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {["Tamil", "English", "Hindi", "Telugu", "Kannada", "Malayalam"].map((lang) => (
-                        <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-                      ))}
+                      <SelectItem value="english">English</SelectItem>
+                      <SelectItem value="tamil">Tamil</SelectItem>
+                      <SelectItem value="kannada">Kannada</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
