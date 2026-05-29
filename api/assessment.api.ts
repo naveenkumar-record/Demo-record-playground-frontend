@@ -129,10 +129,23 @@ apiPathConstants.assessments.base, payload, { accessToken },
 );
  
 export type UpdateAssessmentPayload = {
-orgId: string;
-sections?: AssessmentSection[];
-codingProblems?: CodingProblem[];
-isPublished?: boolean;
+  orgId:            string;
+  // Metadata
+  name?:            string;
+  jobTitle?:        string;
+  jobDescription?:  string;
+  roleType?:        string;
+  experienceRange?: string;
+  skills?:          string[];
+  questionSetType?: string;
+  totalMarks?:      number;
+  passMarks?:       number;
+  duration?:        number;
+  difficulty?:      string;
+  // Builder content
+  sections?:        AssessmentSection[];
+  codingProblems?:  CodingProblem[];
+  isPublished?:     boolean;
 };
  
 export const updateAssessment = (
