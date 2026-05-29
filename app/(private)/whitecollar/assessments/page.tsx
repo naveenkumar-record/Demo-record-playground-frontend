@@ -121,10 +121,11 @@ export default function AssessmentsPage() {
   const [total, setTotal]             = useState(0);
   const [loading, setLoading]         = useState(false);
 
-  // ── Modal state ─────────────────────────────────────────────────────────────
-  const [modalOpen,   setModalOpen]   = useState(false);
-  const [saving,      setSaving]      = useState(false);
-  const [editTarget,  setEditTarget]  = useState<AssessmentItem | null>(null);
+  // Modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm]           = useState<CreateAssessmentForm>(emptyForm());
+  const [errors, setErrors]       = useState<Partial<Record<keyof CreateAssessmentForm, string>>>({});
+  const [saving, setSaving]       = useState(false);
 
   // ── Fetch ───────────────────────────────────────────────────────────────────
 
@@ -136,18 +137,12 @@ export default function AssessmentsPage() {
     const key = `${orgId}|${mode}|${projectId ?? ""}`;
     fetchKeyRef.current = key;
 
-    setLoading(true);
-    try {
-      const token = getAccessToken();
-      const res   = await listAssessments(orgId, 1, 50, mode, token, projectId);
-      if (fetchKeyRef.current !== key) return;          // stale response guard
-
-      setAssessments(res.data?.assessments ?? []);
-      setTotal(res.data?.pagination.total ?? 0);
-    } catch (err: unknown) {
-      if (fetchKeyRef.current !== key) return;
-      toast.error(err instanceof Error ? err.message : "Failed to load assessments");
-    } finally {
+  const validate = (): boolean => {
+    const e: Partial<Record<keyof CreateAssessmentForm, string>> = {};
+    if (!form.name.trim())          e.name           = "Assessment name is required";
+    if (!form.assessmentType)       e.assessmentType  = "Please select a type";
+    setErrors(e);
+    return Object.keys(e).length === 0;
       if (fetchKeyRef.current === key) setLoading(false);
     }
   }, [orgId, mode, projectId]);

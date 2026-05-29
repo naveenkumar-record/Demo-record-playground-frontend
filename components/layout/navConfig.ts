@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Network,
   Send,
+  Settings,
   UserPlus,
 } from "lucide-react";
 
@@ -31,17 +32,13 @@ export const bluecollarNav: NavGroup[] = [
     group: "Verification & Skills",
     items: [
       { label: "Workflows", href: "/bluecollar/workflows", icon: Network },
+      { label: "Requests", href: "/bluecollar/requests", icon: ClipboardList },
     ],
   },
   {
-    group: "Developer",
+    group: "Configuration",
     items: [
-      {
-        label: "Support",
-        href: "https://cal.com/tharunm/30min",
-        icon: Send,
-        external: true,
-      },
+      { label: "Settings", href: "/settings", icon: Settings },
     ],
   },
 ];

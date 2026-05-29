@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { getDashboardStats, type DashboardStats } from "@/api/dashboard.api";
+import { getDashboardStats, type DashboardStats, type StatTrend } from "@/api/dashboard.api";
 import { listWorkflows, type WorkflowItem } from "@/api/workflow.api";
 import { useOrg } from "@/components/layout/orgContext";
 import { useProject } from "@/components/layout/projectContext";
@@ -25,8 +25,12 @@ function formatCount(value: number) {
   return value.toLocaleString("en-IN");
 }
 
-function kpiValue(stats: DashboardStats | null, key: keyof DashboardStats) {
-  return stats ? formatCount(stats[key]) : "0";
+function kpiValue(stats: DashboardStats | null, key: keyof Omit<DashboardStats, "trends">) {
+  return stats ? formatCount(stats[key] as number) : "0";
+}
+
+function kpiTrend(stats: DashboardStats | null, key: keyof DashboardStats["trends"]): StatTrend {
+  return stats?.trends?.[key] ?? { value: 0, direction: "flat", label: "0%" };
 }
 
 function StatSkeleton() {
@@ -96,11 +100,31 @@ export default function DashboardPage() {
   }, [activeOrg?.orgId, activeProject?.projectId, isTestMode]);
 
   const kpis = [
-    { label: "Journeys initiated", value: kpiValue(stats, "journeysInitiated"), trend: "↗ +10%", tone: "up" },
-    { label: "Completed", value: kpiValue(stats, "completed"), trend: "↗ +10%", tone: "up" },
-    { label: "Not attempted", value: kpiValue(stats, "notAttempted"), trend: "↗ +10%", tone: "up" },
-    { label: "Still in progress", value: kpiValue(stats, "stillInProgress"), trend: "↙ -10%", tone: "down" },
-    { label: "Expired", value: kpiValue(stats, "expired"), trend: "↙ -1%", tone: "down" },
+    {
+      label: "Journeys initiated",
+      value: kpiValue(stats, "journeysInitiated"),
+      trend: kpiTrend(stats, "journeysInitiated"),
+    },
+    {
+      label: "Completed",
+      value: kpiValue(stats, "completed"),
+      trend: kpiTrend(stats, "completed"),
+    },
+    {
+      label: "Not attempted",
+      value: kpiValue(stats, "notAttempted"),
+      trend: kpiTrend(stats, "notAttempted"),
+    },
+    {
+      label: "Still in progress",
+      value: kpiValue(stats, "stillInProgress"),
+      trend: kpiTrend(stats, "stillInProgress"),
+    },
+    {
+      label: "Expired",
+      value: kpiValue(stats, "expired"),
+      trend: kpiTrend(stats, "expired"),
+    },
   ];
 
   return (
@@ -130,18 +154,20 @@ export default function DashboardPage() {
               <button
                 key={kpi.label}
                 type="button"
-                className="rounded-md border border-neutral-200 bg-white p-4 text-left transition-colors hover:bg-neutral-50"
+                className="cursor-pointer rounded-md border border-neutral-200 bg-white p-4 text-left transition-colors hover:bg-neutral-50"
               >
                 <p className="text-[12px] font-medium text-[#7a7a7a]">{kpi.label}</p>
                 <div className="mt-3 flex items-end justify-between gap-3">
                   <p className="text-[24px] font-semibold leading-none text-[#0f172a]">{kpi.value}</p>
-                  <span
-                    className={`text-[11px] font-semibold ${
-                      kpi.tone === "up" ? "text-emerald-500" : "text-red-500"
-                    }`}
-                  >
-                    {kpi.trend}
-                  </span>
+                  {kpi.trend.direction !== "flat" && (
+                    <span
+                      className={`text-[11px] font-semibold ${
+                        kpi.trend.direction === "up" ? "text-emerald-500" : "text-red-500"
+                      }`}
+                    >
+                      {kpi.trend.direction === "up" ? "↗" : "↙"} {kpi.trend.label}
+                    </span>
+                  )}
                 </div>
               </button>
             ))}
@@ -204,9 +230,15 @@ export default function DashboardPage() {
                     <TableCell className="text-[13px] text-[#1f1f1f]">
                       {workflow.verifiedCount.toLocaleString("en-IN")}
                     </TableCell>
-                    <TableCell className="text-[13px] text-[#1f1f1f]">0</TableCell>
-                    <TableCell className="text-[13px] text-[#1f1f1f]">0</TableCell>
-                    <TableCell className="text-[13px] text-[#1f1f1f]">0</TableCell>
+                    <TableCell className="text-[13px] text-[#1f1f1f]">
+                      {(workflow.inProgress ?? 0).toLocaleString("en-IN")}
+                    </TableCell>
+                    <TableCell className="text-[13px] text-[#1f1f1f]">
+                      {(workflow.notAttempted ?? 0).toLocaleString("en-IN")}
+                    </TableCell>
+                    <TableCell className="text-[13px] text-[#1f1f1f]">
+                      {(workflow.expired ?? 0).toLocaleString("en-IN")}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
