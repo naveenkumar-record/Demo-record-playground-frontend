@@ -1129,7 +1129,7 @@ export default function CreateAssessmentModal({
     });
     if (assessmentId) {
       handleClose();
-      router.push(`/whitecollar/assessments/${assessmentId}/build`);
+      router.push(`/whitecollar/assessments/${assessmentId}`);
     }
   };
 
