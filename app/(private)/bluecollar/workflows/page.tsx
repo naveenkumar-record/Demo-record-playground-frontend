@@ -96,7 +96,6 @@ function emptyForm(): CreateWorkflowPayload {
     experienceRange: "",
     salary: "",
     location: "",
-    language: "english",
     jobDescription: "",
     startMessage: "",
     completionMessage: "",
@@ -633,41 +632,6 @@ export default function WorkflowPage() {
                     placeholder="eg: Chennai, Mumbai"
                     onChange={(e) => updateForm("location", e.target.value)}
                   />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-[13px] text-[#6a6a6a]">WhatsApp Message Language <span className="text-[#ff5723]">*</span></Label>
-                <p className="text-[11px] text-[#9a9a9a]">Language used to send the WhatsApp verification message to candidates.</p>
-                <div className="flex gap-3">
-                  {(["english", "tamil", "kannada"] as const).map((lang) => {
-                    const label = lang.charAt(0).toUpperCase() + lang.slice(1);
-                    const disabled = false;
-                    const selected = (form.language ?? "tamil") === lang;
-                    return (
-                      <button
-                        key={lang}
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => !disabled && updateForm("language", lang)}
-                        className={cn(
-                          "flex-1 rounded-lg border px-3 py-2.5 text-[13px] font-medium transition-colors",
-                          disabled
-                            ? "cursor-not-allowed border-neutral-200 bg-neutral-50 text-[#aaaaaa]"
-                            : selected
-                            ? "border-[#ff5723] bg-orange-50 text-[#ff5723]"
-                            : "border-neutral-200 bg-white text-[#4a4a4a] hover:bg-neutral-50",
-                        )}
-                      >
-                        {label}
-                        {disabled && (
-                          <span className="ml-1.5 rounded-full bg-neutral-200 px-1.5 py-0.5 text-[9px] font-medium text-[#8a8a8a]">
-                            Soon
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
                 </div>
               </div>
 
