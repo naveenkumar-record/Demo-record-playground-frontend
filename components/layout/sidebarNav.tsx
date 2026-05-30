@@ -34,7 +34,7 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
           className="rounded"
         />
         <span className="text-xl font-semibold text-black">
-          RecordStudio
+          Record Studio
         </span>
       </div>
 

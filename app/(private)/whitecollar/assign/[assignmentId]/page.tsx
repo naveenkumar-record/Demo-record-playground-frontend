@@ -8,7 +8,7 @@ import { listOrgAssignments, type AssignmentItem, type CandidateRecord } from "@
 import { listAssessments } from "@/api/assessment.api";
 import { useOrg } from "@/components/layout/orgContext";
 
-const ASSESSMENT_PORTAL_URL = "https://assessment.userecord.io";
+const ASSESSMENT_PORTAL_URL = process.env.NEXT_PUBLIC_ASSESSMENT_PORTAL_URL ?? "";
 
 function getAccessToken() {
   if (typeof window === "undefined") return "";

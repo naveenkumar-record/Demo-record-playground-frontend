@@ -22,7 +22,7 @@ export default async function Page({ searchParams }: OnboardingPageProps) {
       <OnboardingCard>
         <OnboardingStep step={2} />
         <OnboardingTitle
-          title="Welcome to RecordStudio"
+          title="Welcome to Record Studio"
           singleLine
           subtitle={
             <>

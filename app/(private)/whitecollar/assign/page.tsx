@@ -19,7 +19,7 @@ import AssignAssessmentModal from "@/components/whitecollar/assessments/AssignAs
 import { listOrgAssignments, type AssignmentItem, type CandidateRecord } from "@/api/assessmentAssignment.api";
 import { listAssessments,  type AssessmentItem }  from "@/api/assessment.api";
 
-const ASSESSMENT_PORTAL_URL = "https://assessment.userecord.io";
+const ASSESSMENT_PORTAL_URL = process.env.NEXT_PUBLIC_ASSESSMENT_PORTAL_URL ?? "";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
