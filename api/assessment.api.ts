@@ -168,6 +168,43 @@ undefined,
 { accessToken, params: { orgId } },
 );
  
+// ── Overview ──────────────────────────────────────────────────────────────────
+
+export type AssessmentModeStats = {
+  mode:      string;
+  subtitle:  string;
+  created:   number;
+  assigned:  number;
+  completed: number;
+  avgScore:  number;
+  passRate:  number;
+};
+
+export type AssessmentOverview = {
+  stats: {
+    totalAssessments:   number;
+    assignedCandidates: number;
+    completedAttempts:  number;
+    averagePassRate:    number;
+  };
+  funnel: {
+    created:   number;
+    assigned:  number;
+    started:   number;
+    completed: number;
+    passed:    number;
+  };
+  modeStats: AssessmentModeStats[];
+};
+
+export const getAssessmentOverview = (
+  orgId: string, accessToken: string, mode?: "test" | "live",
+) =>
+  getRequest<{ overview: AssessmentOverview }>(apiPathConstants.assessments.overview, {
+    accessToken,
+    params: { orgId, ...(mode ? { mode } : {}) },
+  });
+
 export const deleteAssessmentApi = (
 assessmentId: string, orgId: string, accessToken: string,
 ) =>

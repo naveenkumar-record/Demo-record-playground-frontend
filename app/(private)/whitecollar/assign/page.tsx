@@ -96,14 +96,14 @@ export default function AssignPage() {
     if (!orgId) return;
     setLoading(true);
     try {
-      const res = await listOrgAssignments(orgId, getAccessToken());
+      const res = await listOrgAssignments(orgId, getAccessToken(), mode as "test" | "live");
       setAssignments(res.data?.assignments ?? []);
     } catch {
       toast.error("Failed to load assignments");
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, [orgId, mode]);
 
   // ── Fetch assessments (for modal dropdown) ──────────────────────────────────
 

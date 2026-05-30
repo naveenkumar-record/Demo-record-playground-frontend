@@ -10,6 +10,7 @@ const TEST_MODE_PATHS = [
   "/whitecollar/workflows",
   "/whitecollar/assessments",
   "/whitecollar/requests",
+  "/whitecollar/assign",
 ];
 
 export default function TestModeBanner({ pathname }: { pathname: string }) {
