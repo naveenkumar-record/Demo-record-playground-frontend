@@ -50,7 +50,7 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
               : "bg-white text-[#1f1f1f] shadow-sm",
           )}
         >
-          Bluecollar
+          Blue Collar
         </button>
         <button
           type="button"
@@ -62,7 +62,7 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
               : "bg-white text-[#1f1f1f] shadow-sm",
           )}
         >
-          whitecollar
+          White Collar
         </button>
       </div>
 
