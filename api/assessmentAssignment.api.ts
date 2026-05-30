@@ -61,10 +61,11 @@ export const createAssignment = (
 export const listOrgAssignments = (
   orgId:       string,
   accessToken: string,
+  mode?:       "test" | "live",
 ) =>
   getRequest<{ assignments: AssignmentItem[]; total: number }>(
     `${apiPathConstants.assessments.base}/assignments`,
-    { accessToken, params: { orgId } },
+    { accessToken, params: { orgId, ...(mode ? { mode } : {}) } },
   );
 
 /** List assignment batches for an assessment */

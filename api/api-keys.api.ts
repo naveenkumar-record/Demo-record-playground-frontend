@@ -16,11 +16,14 @@ export type ApiKey = {
 // Returned only at creation — secretKey shown once
 export type ApiKeyCreated = ApiKey & { secretKey: string };
 
-export const listApiKeys = (orgId: string, accessToken: string, projectId?: string, signal?: AbortSignal) =>
+export const listApiKeys = (
+  orgId: string, accessToken: string,
+  projectId?: string, signal?: AbortSignal, mode?: "test" | "live",
+) =>
   getRequest<ApiKey[]>(apiPathConstants.apiKeys.base, {
     accessToken,
     signal,
-    params: projectId ? { orgId, projectId } : { orgId },
+    params: { orgId, ...(projectId ? { projectId } : {}), ...(mode ? { mode } : {}) },
   });
 
 export const createApiKey = (

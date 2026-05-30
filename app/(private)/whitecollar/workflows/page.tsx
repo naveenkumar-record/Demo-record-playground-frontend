@@ -135,14 +135,14 @@ export default function WorkflowsPage() {
     if (!orgId) return;
     setLoading(true);
     try {
-      const res = await listApiKeys(orgId, getAccessToken(), projectId);
+      const res = await listApiKeys(orgId, getAccessToken(), projectId, undefined, mode as "test" | "live");
       setKeys(res.data ?? []);
     } catch {
       toast.error("Failed to load API keys");
     } finally {
       setLoading(false);
     }
-  }, [orgId, projectId]);
+  }, [orgId, projectId, mode]);
 
   useEffect(() => { fetchKeys(); }, [fetchKeys]);
 

@@ -391,7 +391,7 @@ function AssessmentOptionsStep({
           Select how you&apos;d like to create your assessment.
         </p>
       </DialogHeader>
-      <div className="space-y-3 px-5 sm:px-6">
+      <div className="space-y-3 px-5 py-5 sm:px-6">
         {[
           {
             key: "ai" as const,
@@ -1129,7 +1129,7 @@ export default function CreateAssessmentModal({
     });
     if (assessmentId) {
       handleClose();
-      router.push(`/whitecollar/assessments/${assessmentId}/build`);
+      router.push(`/whitecollar/assessments/${assessmentId}`);
     }
   };
 

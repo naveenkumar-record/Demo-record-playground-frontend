@@ -394,8 +394,9 @@ export default function EditAssessmentModal({ open, assessment, orgId, onClose, 
                   type="button"
                   className="shrink-0 bg-[#ff5723] text-white hover:bg-[#f04d1d]"
                   onClick={() => {
+                    if (!assessment?.assessmentId) return;
                     handleClose();
-                    router.push(`/whitecollar/assessments/${assessment?.assessmentId}/build`);
+                    router.push(`/whitecollar/assessments/${assessment.assessmentId}`);
                   }}
                 >
                   Build Questions
