@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  ArrowLeft,
+  Check,
+  ChevronsUpDown,
   FileUp,
   Info,
   Mic,
@@ -20,8 +23,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 import { toast } from "sonner";
+import states from "@/constants/location.constants";
 
 import {
   createWorkflow,
@@ -105,6 +122,11 @@ function emptyForm(): CreateWorkflowPayload {
   };
 }
 
+// "District, State" combined options sorted alphabetically
+const ALL_LOCATIONS = Object.entries(states)
+  .flatMap(([state, { districts }]) => districts.map((d) => `${d}, ${state}`))
+  .sort((a, b) => a.localeCompare(b));
+
 export default function WorkflowPage() {
   const { activeOrg } = useOrg();
   const { activeProject } = useProject();
@@ -117,6 +139,7 @@ export default function WorkflowPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [open, setOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
   const [requestSuccessOpen, setRequestSuccessOpen] = useState(false);
@@ -262,12 +285,36 @@ export default function WorkflowPage() {
       toast.error("No organization selected");
       return;
     }
-    if (form.skillIds.length === 0) {
-      toast.error("Select at least one skill");
+    if (!(form.jobTitle ?? "").trim()) {
+      toast.error("Job title is required");
+      return;
+    }
+    if (!form.roleType) {
+      toast.error("Role type is required");
+      return;
+    }
+    if (!form.experienceRange) {
+      toast.error("Experience range is required");
+      return;
+    }
+    if (!(form.salary ?? "").trim()) {
+      toast.error("Salary is required");
+      return;
+    }
+    if (!(form.location ?? "").trim()) {
+      toast.error("Location is required");
       return;
     }
     if (!(form.jobDescription ?? "").trim()) {
       toast.error("Job description is required");
+      return;
+    }
+    if (form.skillIds.length === 0) {
+      toast.error("Select at least one skill");
+      return;
+    }
+    if (!form.verificationMethod) {
+      toast.error("Please choose a verification method");
       return;
     }
 
@@ -512,6 +559,15 @@ export default function WorkflowPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] max-w-[540px] overflow-y-auto p-0" showCloseButton>
           <DialogHeader className="border-b border-neutral-200 px-5 py-4">
+            {step === 2 && (
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#697282] transition-colors hover:bg-neutral-100 hover:text-[#1f1f1f]"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+            )}
             <DialogTitle className="text-[16px] font-semibold">Create Workflow</DialogTitle>
             <div className="space-y-2">
               <p className="text-[12px] text-[#8a8a8a]">
@@ -535,7 +591,9 @@ export default function WorkflowPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[13px] text-[#6a6a6a]">Workflow Name</Label>
+                <Label className="text-[13px] text-[#6a6a6a]">
+                  Workflow Name <span className="text-[#ff5723]">*</span>
+                </Label>
                 <Input
                   value={form.name}
                   placeholder="eg: Warehouse Staff Verification"
@@ -544,17 +602,10 @@ export default function WorkflowPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[13px] text-[#6a6a6a]">
-                  Workflow Type
-                </Label>
-                <Select value="Skill Assessment" onValueChange={() => {}}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Skill Assessment">Skill Assessment</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label className="text-[13px] text-[#6a6a6a]">Workflow Type</Label>
+                <div className="flex h-10 w-full items-center rounded-md border border-neutral-200 bg-neutral-50 px-3 text-[13px] text-[#3a3a3a]">
+                  Skill Assessment
+                </div>
                 <p className="text-[12px] text-[#8a8a8a]">More types coming soon.</p>
               </div>
             </div>
@@ -568,7 +619,7 @@ export default function WorkflowPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[13px] text-[#6a6a6a]">Job Title</Label>
+                <Label className="text-[13px] text-[#6a6a6a]">Job Title <span className="text-[#ff5723]">*</span></Label>
                 <Input
                   value={form.jobTitle ?? ""}
                   placeholder="eg: Picker and Packer"
@@ -578,7 +629,7 @@ export default function WorkflowPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-[13px] text-[#6a6a6a]">Role Type</Label>
+                  <Label className="text-[13px] text-[#6a6a6a]">Role Type <span className="text-[#ff5723]">*</span></Label>
                   <Select
                     value={form.roleType ?? ""}
                     onValueChange={(value) => updateForm("roleType", value)}
@@ -594,7 +645,7 @@ export default function WorkflowPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[13px] text-[#6a6a6a]">Experience Range</Label>
+                  <Label className="text-[13px] text-[#6a6a6a]">Experience Range <span className="text-[#ff5723]">*</span></Label>
                   <Select
                     value={form.experienceRange ?? ""}
                     onValueChange={(value) => updateForm("experienceRange", value)}
@@ -612,27 +663,66 @@ export default function WorkflowPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-[13px] text-[#6a6a6a]">Salary</Label>
-                  <div className="flex overflow-hidden rounded-lg border">
-                    <span className="grid w-9 shrink-0 place-items-center bg-neutral-100 text-[13px] text-[#7a7a7a]">₹</span>
-                    <Input
-                      className="rounded-none border-0"
-                      value={form.salary ?? ""}
-                      placeholder="eg: 15,000 - 25,000/month"
-                      onChange={(e) => updateForm("salary", e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[13px] text-[#6a6a6a]">Location</Label>
+              <div className="space-y-2">
+                <Label className="text-[13px] text-[#6a6a6a]">Salary <span className="text-[#ff5723]">*</span></Label>
+                <div className="flex overflow-hidden rounded-lg border">
+                  <span className="grid w-9 shrink-0 place-items-center bg-neutral-100 text-[13px] text-[#7a7a7a]">₹</span>
                   <Input
-                    value={form.location ?? ""}
-                    placeholder="eg: Chennai, Mumbai"
-                    onChange={(e) => updateForm("location", e.target.value)}
+                    className="rounded-none border-0"
+                    value={form.salary ?? ""}
+                    placeholder="eg: 25000"
+                    inputMode="numeric"
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      updateForm("salary", val);
+                    }}
                   />
                 </div>
+              </div>
+
+              {/* Location — District, State */}
+              <div className="space-y-2">
+                <Label className="text-[13px] text-[#6a6a6a]">Location <span className="text-[#ff5723]">*</span></Label>
+                <Popover open={locationOpen} onOpenChange={setLocationOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-[13px] shadow-sm transition-colors hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring",
+                        !form.location && "text-muted-foreground"
+                      )}
+                    >
+                      <span className="truncate">{form.location || "eg: Adilabad, Telangana"}</span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-neutral-400" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search district or state..." className="h-9 text-[13px]" />
+                      <CommandList>
+                        <CommandEmpty className="py-4 text-center text-[13px] text-[#9a9a9a]">No location found.</CommandEmpty>
+                        <CommandGroup>
+                          {ALL_LOCATIONS.map((loc) => (
+                            <CommandItem
+                              key={loc}
+                              value={loc}
+                              onSelect={(val) => {
+                                updateForm("location", val);
+                                setLocationOpen(false);
+                              }}
+                              className="text-[13px]"
+                            >
+                              {loc}
+                              {form.location === loc && (
+                                <Check className="ml-auto h-4 w-4 text-[#ff5723]" />
+                              )}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">
@@ -681,7 +771,7 @@ export default function WorkflowPage() {
 
               <div>
                 <h2 className="text-[13px] font-semibold text-[#1f1f1f]">
-                  Choose Verification Method
+                  Choose Verification Method <span className="text-[#ff5723]">*</span>
                 </h2>
                 <p className="mt-1 text-[12px] leading-5 text-[#7a7a7a]">
                   Select how candidates should complete the verification. You can choose one method based on the role and requirement.
@@ -820,9 +910,6 @@ export default function WorkflowPage() {
                       />
                       <span className="text-[13px] font-medium text-[#1f1f1f]">
                         {skill.name}
-                      </span>
-                      <span className="ml-auto text-[11px] text-[#9a9a9a]">
-                        {skill.skillId}
                       </span>
                     </label>
                   ))}
