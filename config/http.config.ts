@@ -44,7 +44,8 @@ async function tryRefreshToken(): Promise<string | null> {
       if (res.ok && data?.data?.accessToken) {
         const newToken = data.data.accessToken as string;
         if (typeof window !== "undefined") {
-          localStorage.setItem(ACCESS_TOKEN_KEY, newToken);
+          // Must match auth-client.ts which reads from sessionStorage
+          sessionStorage.setItem(ACCESS_TOKEN_KEY, newToken);
           const secure = window.location.protocol === "https:" ? "; Secure" : "";
           document.cookie = `auth_token=${newToken}; path=/; max-age=${16 * 60}; SameSite=Lax${secure}`;
         }
