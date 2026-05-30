@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, ClipboardList, Plus, Users } from "lucide-react";
+import { ChevronRight, ClipboardList, ExternalLink, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { useOrg }      from "@/components/layout/orgContext";
