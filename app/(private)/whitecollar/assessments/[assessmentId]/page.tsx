@@ -7,7 +7,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useOrg }   from "@/components/layout/orgContext";
+import { useOrg }      from "@/components/layout/orgContext";
+import { useTestMode } from "@/components/layout/testModeContext";
 import { Button }   from "@/components/ui/button";
 import { Input }    from "@/components/ui/input";
 import { Label }    from "@/components/ui/label";
@@ -139,10 +140,13 @@ const STEPS = [
   { n: 4, label: "Review & Publish" },
 ];
 
-function BuildStepper({ current }: { current: number }) {
+function BuildStepper({ current, isNonIT }: { current: number; isNonIT: boolean }) {
+  // NON-IT roles skip the Skill Assessment step entirely
+  const steps = STEPS.filter((s) => !(isNonIT && s.n === 3));
+
   return (
     <div className="flex items-start justify-center">
-      {STEPS.map((s, i) => {
+      {steps.map((s, i) => {
         const done   = s.n < current;
         const active = s.n === current;
         return (
@@ -157,7 +161,7 @@ function BuildStepper({ current }: { current: number }) {
                            { background: "#fff", borderColor: "#d4d4d4", color: "#aaa" }
                 }
               >
-                {done ? <Check className="h-5 w-5" strokeWidth={3} /> : s.n}
+                {done ? <Check className="h-5 w-5" strokeWidth={3} /> : i + 1}
               </div>
               <p className={cn(
                 "text-center text-[12px] leading-tight",
@@ -170,7 +174,7 @@ function BuildStepper({ current }: { current: number }) {
             </div>
 
             {/* Connector — marginTop 20px = circle center (circle h=40px / 2) */}
-            {i < STEPS.length - 1 && (
+            {i < steps.length - 1 && (
               <div
                 style={{
                   marginTop: 20,
@@ -912,6 +916,9 @@ function ReviewPublish({
   const codingTotal    = problems.reduce((s, p) => s + p.marks, 0);
   const grandTotal     = knowledgeTotal + codingTotal;
 
+  const configuredTotal = assessment.totalMarks ?? 0;
+  const marksMismatch   = configuredTotal > 0 && grandTotal !== configuredTotal;
+
   return (
     <div>
       <div className="mb-6 flex items-start justify-between">
@@ -922,19 +929,47 @@ function ReviewPublish({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex h-9 items-center rounded-lg border border-neutral-200 bg-neutral-50 px-4 text-[12px] text-[#6a6a6a]">
-            Total Marks: <span className="ml-1.5 font-bold text-[#1f1f1f]">{grandTotal}</span>
+          <div className={cn(
+            "flex h-9 items-center rounded-lg border px-4 text-[12px]",
+            marksMismatch
+              ? "border-red-300 bg-red-50 text-red-600"
+              : "border-neutral-200 bg-neutral-50 text-[#6a6a6a]",
+          )}>
+            Total Marks:
+            <span className={cn("ml-1.5 font-bold", marksMismatch ? "text-red-600" : "text-[#1f1f1f]")}>
+              {grandTotal}
+            </span>
+            {marksMismatch && (
+              <span className="ml-1 text-[11px]">/ {configuredTotal} expected</span>
+            )}
           </div>
           <Button variant="outline" className="h-9 gap-2 text-[13px]" onClick={() => onEdit(2)}>
             <Pencil className="h-4 w-4" />
             Edit
           </Button>
-          <Button onClick={onFinish} disabled={saving}
-            className="h-9 bg-[#ff5723] text-[13px] font-semibold text-white hover:bg-[#f04d1d]">
+          <Button
+            onClick={onFinish}
+            disabled={saving || marksMismatch}
+            title={marksMismatch ? `Question marks total (${grandTotal}) must equal the configured Total Marks (${configuredTotal})` : undefined}
+            className="h-9 bg-[#ff5723] text-[13px] font-semibold text-white hover:bg-[#f04d1d] disabled:opacity-50 disabled:cursor-not-allowed">
             {saving ? "Publishing…" : "Finish"}
           </Button>
         </div>
       </div>
+
+      {/* Marks mismatch warning */}
+      {marksMismatch && (
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-4">
+          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold">!</span>
+          <div>
+            <p className="text-[13px] font-semibold text-red-700">Total marks mismatch</p>
+            <p className="mt-0.5 text-[12px] text-red-600">
+              Your questions add up to <b>{grandTotal} marks</b> but the assessment is configured for <b>{configuredTotal} marks</b>.
+              Go back to the Knowledge Assessment and adjust the question marks to match, or edit the assessment details to update the configured total.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Basic details */}
       <div className="mb-5 rounded-xl border border-neutral-200 bg-white p-5">
@@ -1054,9 +1089,10 @@ function ReviewPublish({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AssessmentBuildPage() {
-  const params        = useParams<{ assessmentId: string }>();
-  const router        = useRouter();
-  const { activeOrg } = useOrg();
+  const params         = useParams<{ assessmentId: string }>();
+  const router         = useRouter();
+  const { activeOrg }  = useOrg();
+  const { isTestMode } = useTestMode();
 
   const assessmentId = params.assessmentId;
   const orgId        = activeOrg?.orgId ?? "";
@@ -1068,6 +1104,8 @@ export default function AssessmentBuildPage() {
 
   const [sections, setSections] = useState<LocalSection[]>([newSection()]);
   const [problems, setProblems] = useState<LocalProblem[]>([newProblem()]);
+
+  const isNonIT = assessment?.roleType?.toUpperCase() === "NON-IT";
 
   const fetchAssessment = useCallback(async () => {
     if (!orgId || !assessmentId) return;
@@ -1169,7 +1207,7 @@ export default function AssessmentBuildPage() {
     try {
       await updateAssessment(assessmentId, { orgId, sections: sections.map(toApiSection) }, getToken());
       toast.success("Knowledge assessment saved");
-      setStep(3);
+      setStep(isNonIT ? 4 : 3);
     } catch { toast.error("Failed to save"); }
     finally  { setSaving(false); }
   };
@@ -1190,7 +1228,12 @@ export default function AssessmentBuildPage() {
     try {
       await updateAssessment(
         assessmentId,
-        { orgId, sections: sections.map(toApiSection), codingProblems: problems.map(toApiProblem), isPublished: true },
+        {
+          orgId,
+          sections: sections.map(toApiSection),
+          ...(isNonIT ? {} : { codingProblems: problems.map(toApiProblem) }),
+          isPublished: true,
+        },
         getToken(),
       );
       toast.success("Assessment published!");
@@ -1223,12 +1266,20 @@ export default function AssessmentBuildPage() {
               {assessment?.name ?? assessmentId}
             </span>
           </span>
+          <span className={cn(
+            "ml-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+            isTestMode
+              ? "bg-amber-100 text-amber-700"
+              : "bg-emerald-100 text-emerald-700",
+          )}>
+            {isTestMode ? "Test" : "Live"}
+          </span>
         </div>
       </div>
 
       {/* Stepper */}
       <div className="bg-white px-6 py-6">
-        <BuildStepper current={step} />
+        <BuildStepper current={step} isNonIT={isNonIT} />
       </div>
 
       {/* Content */}
@@ -1240,7 +1291,7 @@ export default function AssessmentBuildPage() {
             onSaveAndContinue={handleSaveKnowledge}
           />
         )}
-        {step === 3 && (
+        {step === 3 && !isNonIT && (
           <SkillBuilder
             problems={problems} saving={saving}
             onChange={setProblems}

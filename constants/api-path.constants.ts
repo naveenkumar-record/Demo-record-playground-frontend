@@ -57,6 +57,7 @@ const apiPathConstants = {
   },
   assessments: {
     base:        "/assessments",
+    overview:    "/assessments/overview",
     byId:        (id: string)                => `/assessments/${id}`,
     toggle:      (id: string)                => `/assessments/${id}/toggle`,
     delete:      (id: string)                => `/assessments/${id}`,
