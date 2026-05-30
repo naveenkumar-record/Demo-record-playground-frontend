@@ -14,6 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 import {
@@ -350,7 +356,18 @@ export default function AssignAssessmentModal({
             <div>
               <Label className="mb-1 flex items-center gap-1 text-[12px] font-medium text-[#3a3a3a]">
                 Create Tag <span className="text-red-500">*</span>
-                <Info className="h-3.5 w-3.5 text-neutral-400" />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex cursor-help items-center text-neutral-400">
+                        <Info className="h-3 w-3" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={6}>
+                      tag as SNS
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </Label>
               <Input
                 placeholder="eg: SNS"
