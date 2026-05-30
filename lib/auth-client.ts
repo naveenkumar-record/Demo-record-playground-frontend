@@ -3,7 +3,7 @@ import { AuthUser } from "@/interfaces/auth.interface";
 export const AUTH_ACCESS_TOKEN_KEY = "auth_access_token";
 export const AUTH_USER_KEY = "auth_user";
 export const AUTH_TOKEN_COOKIE = "auth_token";
-
+ 
 /** Slightly longer than the 15-min JWT to avoid race conditions on SSR reads */
 const COOKIE_MAX_AGE_SECONDS = 16 * 60;
 
