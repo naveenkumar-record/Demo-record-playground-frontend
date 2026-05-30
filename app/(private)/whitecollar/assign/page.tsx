@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Users, ClipboardList } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronRight, ClipboardList, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { useOrg }      from "@/components/layout/orgContext";
@@ -15,8 +16,10 @@ import {
 import { cn } from "@/lib/utils";
 
 import AssignAssessmentModal from "@/components/whitecollar/assessments/AssignAssessmentModal";
-import { listOrgAssignments, type AssignmentItem } from "@/api/assessmentAssignment.api";
+import { listOrgAssignments, type AssignmentItem, type CandidateRecord } from "@/api/assessmentAssignment.api";
 import { listAssessments,  type AssessmentItem }  from "@/api/assessment.api";
+
+const ASSESSMENT_PORTAL_URL = "https://assessment.userecord.io";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -29,6 +32,30 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit", month: "short", year: "numeric",
   }).format(new Date(value));
+}
+
+function reportUrl(assessmentId: string, candidateId: string) {
+  return `${ASSESSMENT_PORTAL_URL}/assessment/${assessmentId}/report/${candidateId}`;
+}
+
+// ── Candidate status badge ────────────────────────────────────────────────────
+
+const STATUS_STYLE: Record<CandidateRecord["status"], string> = {
+  pending:   "bg-neutral-100 text-neutral-500",
+  started:   "bg-amber-50 text-amber-600",
+  completed: "bg-emerald-50 text-emerald-600",
+  expired:   "bg-red-50 text-red-500",
+};
+
+function StatusBadge({ status }: { status: CandidateRecord["status"] }) {
+  return (
+    <span className={cn(
+      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize",
+      STATUS_STYLE[status],
+    )}>
+      {status}
+    </span>
+  );
 }
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
@@ -50,7 +77,7 @@ function SkeletonRow() {
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <TableRow>
-      <TableCell colSpan={6}>
+      <TableCell colSpan={7}>
         <div className="flex flex-col items-center justify-center gap-3 py-16">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100">
             <Users className="h-5 w-5 text-neutral-400" />
@@ -74,9 +101,85 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
   );
 }
 
+// ── Expanded candidate sub-table ──────────────────────────────────────────────
+
+function CandidateSubTable({
+  assignment,
+  assessmentName,
+}: {
+  assignment: AssignmentItem;
+  assessmentName: string;
+}) {
+  const { candidates, assessmentId } = assignment;
+
+  return (
+    <TableRow className="bg-[#fafafa] hover:bg-[#fafafa]">
+      <TableCell colSpan={7} className="px-0 py-0">
+        <div className="border-t border-neutral-100 px-8 py-4">
+          <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-[#9a9a9a]">
+            Candidates — {assessmentName}
+          </p>
+
+          {candidates.length === 0 ? (
+            <p className="text-[13px] text-[#9a9a9a]">No candidates in this batch.</p>
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-100 bg-neutral-50">
+                    <th className="px-4 py-2.5 text-left text-[12px] font-medium text-[#7a7a7a]">Name</th>
+                    <th className="px-4 py-2.5 text-left text-[12px] font-medium text-[#7a7a7a]">Email</th>
+                    <th className="px-4 py-2.5 text-left text-[12px] font-medium text-[#7a7a7a]">Status</th>
+                    <th className="px-4 py-2.5 text-left text-[12px] font-medium text-[#7a7a7a]">Assigned</th>
+                    <th className="px-4 py-2.5 text-right text-[12px] font-medium text-[#7a7a7a]">Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {candidates.map((c) => (
+                    <tr key={c.candidateId} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
+                      <td className="px-4 py-3 text-[13px] font-medium text-[#1f1f1f]">{c.name}</td>
+                      <td className="px-4 py-3 text-[13px] text-[#6a6a6a]">{c.email}</td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={c.status} />
+                      </td>
+                      <td className="px-4 py-3 text-[12px] text-[#9a9a9a]">
+                        {formatDate(c.assignedAt)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <a
+                          href={reportUrl(assessmentId, c.candidateId)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[12px] font-medium transition-colors",
+                            c.status === "completed"
+                              ? "bg-[#ff5723] text-white hover:bg-[#f04d1d]"
+                              : "cursor-not-allowed bg-neutral-100 text-neutral-400",
+                          )}
+                          onClick={(e) => {
+                            if (c.status !== "completed") e.preventDefault();
+                          }}
+                        >
+                          View Result
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AssignPage() {
+  const router            = useRouter();
   const { activeOrg }     = useOrg();
   const { activeProject } = useProject();
   const { isTestMode }    = useTestMode();
@@ -85,10 +188,10 @@ export default function AssignPage() {
   const projectId = activeProject?.projectId ?? undefined;
   const mode      = isTestMode ? "test" : "live";
 
-  const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
-  const [assessments, setAssessments] = useState<AssessmentItem[]>([]);
-  const [loading,     setLoading]     = useState(false);
-  const [modalOpen,   setModalOpen]   = useState(false);
+  const [assignments,  setAssignments]  = useState<AssignmentItem[]>([]);
+  const [assessments,  setAssessments]  = useState<AssessmentItem[]>([]);
+  const [loading,      setLoading]      = useState(false);
+  const [modalOpen,    setModalOpen]    = useState(false);
 
   // ── Fetch assignments ───────────────────────────────────────────────────────
 
@@ -125,6 +228,10 @@ export default function AssignPage() {
   const getAssessmentName = (assessmentId: string) =>
     assessments.find((a) => a.assessmentId === assessmentId)?.name ?? assessmentId;
 
+  const openAssignment = (assignmentId: string) => {
+    router.push(`/whitecollar/assign/${assignmentId}`);
+  };
+
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
@@ -152,7 +259,8 @@ export default function AssignPage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-white hover:bg-white">
-              <TableHead className="h-12 px-5 text-[13px] font-medium text-[#7a7a7a]">Batch Name</TableHead>
+              <TableHead className="h-12 w-8 px-5" />
+              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Batch Name</TableHead>
               <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Assessment</TableHead>
               <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Tag</TableHead>
               <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Candidates</TableHead>
@@ -167,61 +275,73 @@ export default function AssignPage() {
             ) : assignments.length === 0 ? (
               <EmptyState onAdd={() => setModalOpen(true)} />
             ) : (
-              assignments.map((a) => (
-                <TableRow key={a.assignmentId}>
+              assignments.map((a) => {
+                return (
+                  <>
+                    <TableRow
+                      key={a.assignmentId}
+                      className="cursor-pointer hover:bg-neutral-50"
+                      onClick={() => openAssignment(a.assignmentId)}
+                    >
+                      {/* Arrow icon */}
+                      <TableCell className="px-5 py-4 w-8">
+                        <ChevronRight className="h-4 w-4 text-neutral-400" />
+                      </TableCell>
 
-                  {/* Batch name + ID */}
-                  <TableCell className="px-5 py-4">
-                    <p className="text-[13px] font-semibold text-[#1f1f1f]">{a.batchName}</p>
-                    <p className="mt-0.5 text-[11px] text-[#aaa]">{a.assignmentId}</p>
-                  </TableCell>
+                      {/* Batch name + ID */}
+                      <TableCell className="py-4">
+                        <p className="text-[13px] font-semibold text-[#1f1f1f]">{a.batchName}</p>
+                        <p className="mt-0.5 text-[11px] text-[#aaa]">{a.assignmentId}</p>
+                      </TableCell>
 
-                  {/* Assessment */}
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      <ClipboardList className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
-                      <span className="text-[13px] text-[#3a3a3a]">
-                        {getAssessmentName(a.assessmentId)}
-                      </span>
-                    </div>
-                  </TableCell>
+                      {/* Assessment */}
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <ClipboardList className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+                          <span className="text-[13px] text-[#3a3a3a]">
+                            {getAssessmentName(a.assessmentId)}
+                          </span>
+                        </div>
+                      </TableCell>
 
-                  {/* Tag */}
-                  <TableCell>
-                    {a.tag ? (
-                      <span className="rounded-md bg-neutral-100 px-2 py-1 text-[12px] text-[#6a6a6a]">
-                        {a.tag}
-                      </span>
-                    ) : (
-                      <span className="text-[12px] text-[#bbb]">—</span>
-                    )}
-                  </TableCell>
+                      {/* Tag */}
+                      <TableCell>
+                        {a.tag ? (
+                          <span className="rounded-md bg-neutral-100 px-2 py-1 text-[12px] text-[#6a6a6a]">
+                            {a.tag}
+                          </span>
+                        ) : (
+                          <span className="text-[12px] text-[#bbb]">—</span>
+                        )}
+                      </TableCell>
 
-                  {/* Candidates count */}
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5 text-neutral-400" />
-                      <span className="text-[13px] text-[#3a3a3a]">{a.totalCandidates}</span>
-                    </div>
-                  </TableCell>
+                      {/* Candidates count */}
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <Users className="h-3.5 w-3.5 text-neutral-400" />
+                          <span className="text-[13px] text-[#3a3a3a]">{a.totalCandidates}</span>
+                        </div>
+                      </TableCell>
 
-                  {/* Created */}
-                  <TableCell className="text-[13px] text-[#6a6a6a]">
-                    {formatDate(a.createdAt)}
-                  </TableCell>
+                      {/* Created */}
+                      <TableCell className="text-[13px] text-[#6a6a6a]">
+                        {formatDate(a.createdAt)}
+                      </TableCell>
 
-                  {/* Status badge */}
-                  <TableCell className="pr-5 text-right">
-                    <Badge className={cn(
-                      "text-[11px] font-medium",
-                      "bg-emerald-50 text-emerald-600 hover:bg-emerald-50",
-                    )}>
-                      Active
-                    </Badge>
-                  </TableCell>
+                      {/* Status badge */}
+                      <TableCell className="pr-5 text-right">
+                        <Badge className={cn(
+                          "text-[11px] font-medium",
+                          "bg-emerald-50 text-emerald-600 hover:bg-emerald-50",
+                        )}>
+                          Active
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
 
-                </TableRow>
-              ))
+                  </>
+                );
+              })
             )}
           </TableBody>
         </Table>
