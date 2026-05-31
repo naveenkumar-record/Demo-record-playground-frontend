@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { ExternalLink, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { listOrgAssignments, type AssignmentItem, type CandidateRecord } from "@/api/assessmentAssignment.api";
+import { getAssignmentDetail, type AssignmentItem, type CandidateRecord } from "@/api/assessmentAssignment.api";
 import { listAssessments } from "@/api/assessment.api";
 import { useOrg } from "@/components/layout/orgContext";
 
@@ -19,6 +19,30 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit", month: "short", year: "numeric",
   }).format(new Date(value));
+}
+
+// ── Result badge (Pass / Fail / Not Yet) ──────────────────────────────────────
+
+function ResultBadge({ passed }: { passed?: boolean }) {
+  if (passed === true) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
+        Pass
+      </span>
+    );
+  }
+  if (passed === false) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-[11px] font-semibold text-red-500">
+        Fail
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-[11px] font-medium text-neutral-500">
+      Not Yet
+    </span>
+  );
 }
 
 // ── Status badge ──────────────────────────────────────────────────────────────
@@ -58,13 +82,11 @@ export default function AssignmentDetailPage() {
     const token = getAccessToken();
 
     Promise.all([
-      listOrgAssignments(activeOrg.orgId, token),
+      getAssignmentDetail(assignmentId, activeOrg.orgId, token),
       listAssessments(activeOrg.orgId, 1, 100, "test", token),
     ]).then(([assignRes, assessRes]) => {
-      const found = assignRes.data?.assignments.find(
-        (a) => a.assignmentId === assignmentId,
-      );
-      setAssignment(found ?? null);
+      const found = assignRes.data?.assignment ?? null;
+      setAssignment(found);
 
       if (found) {
         const name = assessRes.data?.assessments.find(
@@ -133,14 +155,15 @@ export default function AssignmentDetailPage() {
               <th className="px-6 py-3 text-left text-[12px] font-medium text-[#7a7a7a]">Name</th>
               <th className="px-6 py-3 text-left text-[12px] font-medium text-[#7a7a7a]">Email</th>
               <th className="px-6 py-3 text-left text-[12px] font-medium text-[#7a7a7a]">Status</th>
+              <th className="px-6 py-3 text-left text-[12px] font-medium text-[#7a7a7a]">Result</th>
               <th className="px-6 py-3 text-left text-[12px] font-medium text-[#7a7a7a]">Assigned</th>
-              <th className="px-6 py-3 text-right text-[12px] font-medium text-[#7a7a7a]">Result</th>
+              <th className="px-6 py-3 text-right text-[12px] font-medium text-[#7a7a7a]">Report</th>
             </tr>
           </thead>
           <tbody>
             {candidates.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-16 text-center text-[13px] text-[#9a9a9a]">
+                <td colSpan={6} className="py-16 text-center text-[13px] text-[#9a9a9a]">
                   No candidates in this batch.
                 </td>
               </tr>
@@ -154,6 +177,9 @@ export default function AssignmentDetailPage() {
                   <td className="px-6 py-4 text-[13px] text-[#6a6a6a]">{c.email}</td>
                   <td className="px-6 py-4">
                     <StatusBadge status={c.status} />
+                  </td>
+                  <td className="px-6 py-4">
+                    <ResultBadge passed={c.passed} />
                   </td>
                   <td className="px-6 py-4 text-[12px] text-[#9a9a9a]">
                     {formatDate(c.assignedAt)}
@@ -169,7 +195,7 @@ export default function AssignmentDetailPage() {
                           : "cursor-not-allowed bg-neutral-100 text-neutral-400",
                       )}
                     >
-                      View Result
+                      View Report
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   </td>
