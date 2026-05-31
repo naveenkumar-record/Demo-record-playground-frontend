@@ -3,18 +3,17 @@ import { AuthUser } from "@/interfaces/auth.interface";
 export const AUTH_ACCESS_TOKEN_KEY = "auth_access_token";
 export const AUTH_USER_KEY = "auth_user";
 export const AUTH_TOKEN_COOKIE = "auth_token";
-
+ 
 /** Slightly longer than the 15-min JWT to avoid race conditions on SSR reads */
 const COOKIE_MAX_AGE_SECONDS = 16 * 60;
 
 // ── Storage helper ─────────────────────────────────────────────────────────────
-// Uses sessionStorage so each browser tab has its own independent session.
-// This enables multi-session: different users (or the same user) can be
-// logged in simultaneously in different tabs without interfering.
+// Uses localStorage so sessions persist across tabs and browser restarts.
+// Multi-device sessions are tracked server-side via refreshTokens[].
 
 function storage() {
   if (typeof window === "undefined") return null;
-  return window.sessionStorage;
+  return window.localStorage;
 }
 
 // ── Cookie helpers (for SSR/middleware token reads) ────────────────────────────
