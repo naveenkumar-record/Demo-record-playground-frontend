@@ -9,6 +9,8 @@ export type CandidateRecord = {
   email:       string;
   status:      "pending" | "started" | "completed" | "expired";
   assignedAt:  string;
+  passed?:     boolean;   // undefined = not yet attempted
+  score?:      number;
 };
 
 export type AssignmentItem = {
@@ -66,6 +68,17 @@ export const listOrgAssignments = (
   getRequest<{ assignments: AssignmentItem[]; total: number }>(
     `${apiPathConstants.assessments.base}/assignments`,
     { accessToken, params: { orgId, ...(mode ? { mode } : {}) } },
+  );
+
+/** Get a single assignment detail with pass/fail enrichment */
+export const getAssignmentDetail = (
+  assignmentId: string,
+  orgId:        string,
+  accessToken:  string,
+) =>
+  getRequest<{ assignment: AssignmentItem }>(
+    `${apiPathConstants.assessments.base}/assignments/${assignmentId}`,
+    { accessToken, params: { orgId } },
   );
 
 /** List assignment batches for an assessment */

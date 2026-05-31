@@ -102,9 +102,11 @@ function downloadSampleCSV() {
 function UploadZone({
   file,
   onFile,
+  onClear,
 }: {
   file: File | null;
   onFile: (f: File) => void;
+  onClear: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
@@ -122,18 +124,20 @@ function UploadZone({
 
   return (
     <div
-      onClick={() => inputRef.current?.click()}
+      onClick={() => !file && inputRef.current?.click()}
       onDragOver={(e) => {
         e.preventDefault();
-        setDrag(true);
+        if (!file) setDrag(true);
       }}
       onDragLeave={() => setDrag(false)}
       onDrop={handleDrop}
       className={cn(
-        "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-6 px-4 transition-colors",
-        drag
-          ? "border-[#ff5723] bg-orange-50"
-          : "border-neutral-200 bg-neutral-50 hover:border-neutral-300",
+        "relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-6 px-4 transition-colors",
+        file
+          ? "cursor-default border-[#ff5723] bg-orange-50"
+          : drag
+          ? "cursor-pointer border-[#ff5723] bg-orange-50"
+          : "cursor-pointer border-neutral-200 bg-neutral-50 hover:border-neutral-300",
       )}
     >
       <input
@@ -144,8 +148,21 @@ function UploadZone({
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) onFile(f);
+          e.target.value = "";
         }}
       />
+
+      {/* X button to clear file */}
+      {file && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onClear(); }}
+          className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-white text-neutral-400 shadow-sm transition-colors hover:bg-red-50 hover:text-red-500"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
+
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
         <Upload className="h-5 w-5 text-[#ff5723]" />
       </div>
@@ -302,7 +319,7 @@ export default function AssignAssessmentModal({
           <div className="space-y-4 px-6">
             {/* Upload zone */}
             <div>
-              <UploadZone file={file} onFile={setFile} />
+              <UploadZone file={file} onFile={setFile} onClear={() => setFile(null)} />
               <button
                 type="button"
                 onClick={downloadSampleCSV}
