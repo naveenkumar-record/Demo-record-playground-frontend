@@ -244,7 +244,7 @@ export default function EditAssessmentModal({ open, assessment, orgId, onClose, 
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-        <DialogContent className="max-h-[90vh] max-w-[600px] overflow-y-auto p-0" showCloseButton>
+        <DialogContent className="max-h-[90vh] sm:max-w-[800px] overflow-y-auto p-0" showCloseButton>
           <DialogHeader className="border-b border-neutral-200 px-6 py-4">
             <DialogTitle className="text-[16px] font-semibold">Edit Assessment</DialogTitle>
             <p className="text-[12px] text-[#8a8a8a]">
@@ -335,7 +335,7 @@ export default function EditAssessmentModal({ open, assessment, orgId, onClose, 
               <Button type="button" size="sm"
                 disabled={form.selectedSkills.length >= 5}
                 onClick={() => setSkillPickerOpen(true)}
-                className="h-9 gap-1.5 rounded-full bg-[#ff5723] px-4 text-[13px] font-semibold text-white hover:bg-[#f04d1d] disabled:opacity-50">
+                className="h-9 gap-1.5 rounded-lg bg-[#ff5723] px-4 text-[13px] font-semibold text-white hover:bg-[#f04d1d] disabled:opacity-50">
                 <Plus className="h-3.5 w-3.5" />
                 Add skills
               </Button>

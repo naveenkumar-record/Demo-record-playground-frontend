@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, ClipboardList, ExternalLink, Plus, Users } from "lucide-react";
+import { ClipboardList, ExternalLink, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { useOrg }      from "@/components/layout/orgContext";
@@ -14,6 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import PaginationControl from "@/components/ui/pagination-control";
 
 import AssignAssessmentModal from "@/components/whitecollar/assessments/AssignAssessmentModal";
 import { listOrgAssignments, type AssignmentItem, type CandidateRecord } from "@/api/assessmentAssignment.api";
@@ -192,6 +193,8 @@ export default function AssignPage() {
   const [assessments,  setAssessments]  = useState<AssessmentItem[]>([]);
   const [loading,      setLoading]      = useState(false);
   const [modalOpen,    setModalOpen]    = useState(false);
+  const [page,         setPage]         = useState(1);
+  const PAGE_SIZE = 10;
 
   // ── Fetch assignments ───────────────────────────────────────────────────────
 
@@ -201,6 +204,7 @@ export default function AssignPage() {
     try {
       const res = await listOrgAssignments(orgId, getAccessToken(), mode as "test" | "live");
       setAssignments(res.data?.assignments ?? []);
+      setPage(1);
     } catch {
       toast.error("Failed to load assignments");
     } finally {
@@ -241,9 +245,6 @@ export default function AssignPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[16px] font-semibold text-[#1f1f1f]">Assign Assessments</h1>
-          <p className="mt-0.5 text-[12px] text-[#9a9a9a]">
-            Assign assessments to candidate batches via CSV upload.
-          </p>
         </div>
         <Button
           className="h-10 gap-2 bg-[#ff5723] px-5 text-[13px] font-semibold text-white hover:bg-[#f04d1d]"
@@ -255,17 +256,17 @@ export default function AssignPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-md border border-neutral-200 bg-white">
+      <div className="overflow-hidden rounded-md border border-neutral-200 bg-white [&_th]:px-6 [&_th]:py-4 [&_td]:px-6">
         <Table>
           <TableHeader>
-            <TableRow className="bg-white hover:bg-white">
-              <TableHead className="h-12 w-8 px-5" />
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Batch Name</TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Assessment</TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Tag</TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Candidates</TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Created</TableHead>
-              <TableHead className="pr-5 text-right text-[13px] font-medium text-[#7a7a7a]">Status</TableHead>
+            <TableRow>
+              <TableHead>Batch Name</TableHead>
+              <TableHead>Assessment</TableHead>
+              <TableHead>Tag</TableHead>
+              <TableHead>Candidates</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -274,20 +275,12 @@ export default function AssignPage() {
               Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)
             ) : assignments.length === 0 ? (
               <EmptyState onAdd={() => setModalOpen(true)} />
+
             ) : (
-              assignments.map((a) => {
+              assignments.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((a) => {
                 return (
                   <>
-                    <TableRow
-                      key={a.assignmentId}
-                      className="cursor-pointer hover:bg-neutral-50"
-                      onClick={() => openAssignment(a.assignmentId)}
-                    >
-                      {/* Arrow icon */}
-                      <TableCell className="px-5 py-4 w-8">
-                        <ChevronRight className="h-4 w-4 text-neutral-400" />
-                      </TableCell>
-
+                    <TableRow key={a.assignmentId}>
                       {/* Batch name + ID */}
                       <TableCell className="py-4">
                         <p className="text-[13px] font-semibold text-[#1f1f1f]">{a.batchName}</p>
@@ -329,13 +322,22 @@ export default function AssignPage() {
                       </TableCell>
 
                       {/* Status badge */}
-                      <TableCell className="pr-5 text-right">
-                        <Badge className={cn(
-                          "text-[11px] font-medium",
-                          "bg-emerald-50 text-emerald-600 hover:bg-emerald-50",
-                        )}>
+                      <TableCell>
+                        <Badge className="bg-emerald-50 text-emerald-600 hover:bg-emerald-50 text-[11px] font-medium">
                           Active
                         </Badge>
+                      </TableCell>
+
+                      <TableCell className="pr-5 text-left">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 gap-1.5 px-3 text-[12px] font-medium text-[#3a3a3a]"
+                          onClick={() => openAssignment(a.assignmentId)}
+                        >
+                          <Users className="h-3.5 w-3.5" />
+                          View Candidates
+                        </Button>
                       </TableCell>
                     </TableRow>
 
@@ -344,15 +346,17 @@ export default function AssignPage() {
               })
             )}
           </TableBody>
-        </Table>
-
-        {/* Footer */}
-        {assignments.length > 0 && (
-          <div className="flex items-center border-t border-neutral-200 px-5 py-4 text-[12px] text-[#7a7a7a]">
-            Showing {assignments.length} assignment{assignments.length !== 1 ? "s" : ""}
+        </Table>       
+      </div>
+      {assignments.length > 0 && (
+          <div className="flex items-center justify-end px-5 py-4">
+            <PaginationControl
+              currentPage={page}
+              totalPages={Math.max(1, Math.ceil(assignments.length / PAGE_SIZE))}
+              onPageChange={(p) => setPage(p)}
+            />
           </div>
         )}
-      </div>
 
       {/* Assign Modal */}
       <AssignAssessmentModal

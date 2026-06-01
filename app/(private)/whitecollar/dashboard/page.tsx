@@ -24,7 +24,6 @@ function getToken() {
   return localStorage.getItem("auth_access_token") ?? "";
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmt(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
@@ -33,7 +32,6 @@ function fmt(n: number): string {
 }
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
-
 function StatCard({
   icon,
   label,
@@ -44,8 +42,8 @@ function StatCard({
   value: string | number;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-neutral-200 bg-white px-5 py-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-neutral-500">
+    <div className="flex items-center gap-4 rounded-lg border border-neutral-200 bg-white px-5 py-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-500">
         {icon}
       </div>
       <div>
@@ -61,20 +59,19 @@ function StatCard({
 function ModeIcon({ mode }: { mode: string }) {
   if (mode === "AI Powered") {
     return (
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-100">
         <Sparkles className="h-5 w-5 text-neutral-500" />
       </div>
     );
   }
   return (
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100">
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-100">
       <AlignLeft className="h-5 w-5 text-neutral-500" />
     </div>
   );
 }
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
-
 function Bar({ pct, green = false }: { pct: number; green?: boolean }) {
   return (
     <div className="h-[6px] w-full overflow-hidden rounded-full bg-neutral-200">
@@ -101,7 +98,7 @@ function ModeCard({
   const barPct = maxAssigned > 0 ? (stat.completed / maxAssigned) * 100 : 0;
 
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+    <div className="rounded-lg border border-neutral-200 bg-white p-5">
       <div className="mb-4 flex items-start justify-between">
         <div className="flex items-center gap-3">
           <ModeIcon mode={stat.mode} />
@@ -171,9 +168,8 @@ function FunnelRow({
 }
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
-
 function Pulse({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-2xl bg-neutral-200", className)} />;
+  return <div className={cn("animate-pulse rounded-lg bg-neutral-200", className)} />;
 }
 
 function PageSkeleton() {
@@ -194,7 +190,7 @@ function PageSkeleton() {
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-white py-24 text-center">
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-neutral-300 bg-white py-24 text-center">
       <TrendingUp className="mb-3 h-10 w-10 text-neutral-300" />
       <p className="text-[14px] font-semibold text-[#3a3a3a]">No data yet</p>
       <p className="mt-1 text-[13px] text-[#9a9a9a]">
@@ -281,7 +277,7 @@ export default function WhitecollarDashboardPage() {
         <h1 className="text-[22px] font-semibold text-[#1f1f1f]">Overview</h1>
         <button
           type="button"
-          className="flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-4 py-2 text-[13px] font-medium text-[#3a3a3a] hover:bg-neutral-50"
+          className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-4 py-2 text-[13px] font-medium text-[#3a3a3a] hover:bg-neutral-50"
         >
           Last 30 days
           <ChevronDown className="h-4 w-4 text-neutral-400" />
@@ -320,8 +316,7 @@ export default function WhitecollarDashboardPage() {
 
           {/* Two-column content */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_420px]">
-            {/* Assessment mode preference */}
-            <div className="rounded-2xl border border-neutral-200 bg-[#fafafa] p-6">
+            <div className="rounded-lg border border-neutral-200 p-6">
               <h2 className="text-[16px] font-bold text-[#1f1f1f]">
                 Assessment mode preference
               </h2>
@@ -340,7 +335,7 @@ export default function WhitecollarDashboardPage() {
             </div>
 
             {/* Overall assessment funnel */}
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6">
+            <div className="rounded-lg border border-neutral-200 bg-white p-6">
               <h2 className="text-[16px] font-bold text-[#1f1f1f]">
                 Overall assessment funnel
               </h2>
