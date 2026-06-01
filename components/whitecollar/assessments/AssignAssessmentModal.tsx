@@ -132,7 +132,7 @@ function UploadZone({
       onDragLeave={() => setDrag(false)}
       onDrop={handleDrop}
       className={cn(
-        "relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-6 px-4 transition-colors",
+        "relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-6 px-4",
         file
           ? "cursor-default border-[#ff5723] bg-orange-50"
           : drag
@@ -170,13 +170,12 @@ function UploadZone({
         <p className="text-[13px] font-medium text-[#1f1f1f]">{file.name}</p>
       ) : (
         <>
-          <p className="text-[13px] font-medium text-[#1f1f1f]">
+          <p className="text-sm font-medium text-black">
             Click or drag file with student data
           </p>
-          <p className="text-[11px] text-[#9a9a9a] text-center">
+          <p className="text-xs text-[#9a9a9a] text-center">
             Supports single and bulk uploads. Only CSV files are supported, with
-            a maximum file size of 10 MB. Please do not upload confidential
-            company data or any prohibited files.
+            a maximum file size of 10 MB.
           </p>
         </>
       )}
@@ -224,10 +223,10 @@ export default function AssignAssessmentModal({
   // ── Step 1 → 2: parse CSV + check duplicates ──────────────────────────────
 
   const handleContinueToPreview = async () => {
-    if (!file) return toast.error("Please upload a CSV file");
-    if (!batchName.trim()) return toast.error("Batch name is required");
-    if (!tag.trim()) return toast.error("Tag is required");
-    if (!assessmentId) return toast.error("Please select an assessment");
+    if (!file) return toast.message("Upload CSV file");
+    if (!batchName.trim()) return toast.message("Batch name is required");
+    if (!tag.trim()) return toast.message("Tag is required");
+    if (!assessmentId) return toast.message("Please select an assessment");
 
     setChecking(true);
     try {
@@ -302,7 +301,7 @@ export default function AssignAssessmentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="w-full max-w-lg overflow-hidden rounded-lg bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-5">
           <h2 className="text-[15px] font-semibold text-[#1f1f1f]">
@@ -323,7 +322,7 @@ export default function AssignAssessmentModal({
               <button
                 type="button"
                 onClick={downloadSampleCSV}
-                className="mt-2 inline-flex items-center gap-2 text-[14px] font-semibold text-[#022c22] hover:text-[#ff5723] transition-colors cursor-pointer"
+                className="mt-3 inline-flex items-center gap-2 text-[14px] font-semibold text-[#022c22] hover:text-[#ff5723] transition-colors cursor-pointer"
               >
                 <Download className="h-4 w-4" strokeWidth={2.2} />
                 Download Sample .CSV
@@ -332,7 +331,7 @@ export default function AssignAssessmentModal({
 
             {/* Batch name */}
             <div>
-              <Label className="mb-1 text-[12px] font-medium text-[#3a3a3a]">
+              <Label className="mb-1 text-sm font-medium text-[#3a3a3a]">
                 Batch name <span className="text-red-500">*</span>
               </Label>
               <Input
@@ -345,7 +344,7 @@ export default function AssignAssessmentModal({
 
             {/* Select Assessment */}
             <div>
-              <Label className="mb-1 text-[12px] font-medium text-[#3a3a3a]">
+              <Label className="mb-1 text-sm font-medium text-[#3a3a3a]">
                 Select Assessment <span className="text-red-500">*</span>
               </Label>
               <Select value={assessmentId} onValueChange={setAssessmentId}>
@@ -371,7 +370,7 @@ export default function AssignAssessmentModal({
 
             {/* Tag */}
             <div>
-              <Label className="mb-1 flex items-center gap-1 text-[12px] font-medium text-[#3a3a3a]">
+              <Label className="mb-1 flex items-center gap-1 text-sm font-medium text-[#3a3a3a]">
                 Create Tag <span className="text-red-500">*</span>
                 <TooltipProvider>
                   <Tooltip>
