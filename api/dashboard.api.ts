@@ -27,10 +27,10 @@ export const getDashboardStats = (
   mode:        "test" | "live",
   accessToken: string,
   projectId?:  string,
+  days:        number = 30,
   signal?:     AbortSignal,
-) =>
-  getRequest<DashboardStats>(apiPathConstants.dashboard.stats, {
-    accessToken,
-    signal,
-    params: projectId ? { orgId, mode, projectId } : { orgId, mode },
-  });
+) => {
+  const params: Record<string, string> = { orgId, mode, days: String(days) };
+  if (projectId) params.projectId = projectId;
+  return getRequest<DashboardStats>(apiPathConstants.dashboard.stats, { accessToken, signal, params });
+};

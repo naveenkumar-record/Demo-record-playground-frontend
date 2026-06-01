@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   getRequestDetail,
+  resendLog,
   type RequestDetail,
   type VideoItem,
   type QuestionSummaryItem,
@@ -161,9 +162,25 @@ export default function CandidateDetailPage() {
   const params = useParams<{ candidateId: string }>();
   const candidateId = params.candidateId;
 
-  const [detail, setDetail] = useState<RequestDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [detail,        setDetail]        = useState<RequestDetail | null>(null);
+  const [loading,       setLoading]       = useState(true);
+  const [resending,     setResending]     = useState(false);
   const [selectedQIndex, setSelectedQIndex] = useState(0);
+
+  const handleResend = async () => {
+    if (!candidateId) return;
+    const token = getAccessToken();
+    if (!token) return;
+    setResending(true);
+    try {
+      await resendLog(candidateId, token);
+      toast.success("WhatsApp message resent successfully");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to resend");
+    } finally {
+      setResending(false);
+    }
+  };
 
   useEffect(() => {
     if (!candidateId) return;
@@ -272,8 +289,13 @@ export default function CandidateDetailPage() {
             </button>
             <h1 className="text-[20px] font-semibold text-[#1f1f1f]">{detail.name}</h1>
           </div>
-          <Button variant="outline" className="flex cursor-pointer items-center gap-1.5 text-[13px]">
-            Resend
+          <Button
+            variant="outline"
+            className="flex cursor-pointer items-center gap-1.5 text-[13px]"
+            disabled={resending}
+            onClick={handleResend}
+          >
+            {resending ? "Sending..." : "Resend"}
             <Send className="h-3.5 w-3.5" />
           </Button>
         </div>
