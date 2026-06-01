@@ -356,9 +356,9 @@ export default function WorkflowPage() {
     setManualCandidates([]);
     setCurrentManualName("");
     setCurrentManualPhone("");
-    setCurrentManualRole("");
-    setRequestRole("");
-    setRequestLanguage("Tamil");
+    setCurrentManualRole(workflow.name);
+    setRequestRole(workflow.name);
+    setRequestLanguage("english");
     setRequestLinkExpiry("7 Days");
     setCsvCandidates([]);
     setRequestOpen(true);
@@ -557,7 +557,7 @@ export default function WorkflowPage() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] max-w-[540px] overflow-y-auto p-0" showCloseButton>
+        <DialogContent className="max-h-[90vh] w-[720px] max-w-[720px] sm:max-w-[720px] overflow-y-auto p-0" showCloseButton>
           <DialogHeader className="border-b border-neutral-200 px-5 py-4">
             {step === 2 && (
               <button
@@ -634,7 +634,7 @@ export default function WorkflowPage() {
                     value={form.roleType ?? ""}
                     onValueChange={(value) => updateForm("roleType", value)}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full !bg-white">
                       <SelectValue placeholder="Select role type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -650,7 +650,7 @@ export default function WorkflowPage() {
                     value={form.experienceRange ?? ""}
                     onValueChange={(value) => updateForm("experienceRange", value)}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full !bg-white">
                       <SelectValue placeholder="Select experience range" />
                     </SelectTrigger>
                     <SelectContent>
@@ -931,7 +931,7 @@ export default function WorkflowPage() {
       </Dialog>
 
       <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
-        <DialogContent className="flex max-h-[88vh] max-w-[570px] flex-col overflow-hidden p-0" showCloseButton>
+        <DialogContent className="flex max-h-[88vh] w-[720px] max-w-[720px] sm:max-w-[720px] flex-col overflow-hidden p-0" showCloseButton>
           <DialogHeader className="shrink-0 border-b border-neutral-200 px-6 py-5">
             <DialogTitle className="text-[16px] font-semibold">
               {requestWorkflow?.name ?? "Generate Request"}
@@ -1149,7 +1149,7 @@ export default function WorkflowPage() {
                     <Info className="h-3.5 w-3.5 text-[#9a9a9a]" />
                   </div>
                   <Select value={requestWorkflow?.workflowId ?? ""} disabled>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full !bg-white">
                       <SelectValue>
                         {requestWorkflow
                           ? `${requestWorkflow.name} – ${requestWorkflow.verificationMethod} + WhatsApp`
@@ -1204,18 +1204,19 @@ export default function WorkflowPage() {
                     value={requestLanguage || "english"}
                     onValueChange={setRequestLanguage}
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue>
+                    <SelectTrigger className="w-full !bg-white">
+                      <SelectValue placeholder="Select language">
                         {requestLanguage
                           ? requestLanguage.charAt(0).toUpperCase() + requestLanguage.slice(1)
-                          : "Select language"}
+                          : "English"}
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="english">English</SelectItem>
-                      <SelectItem value="tamil">Tamil</SelectItem>
-                      <SelectItem value="kannada">Kannada</SelectItem>
-                      <SelectItem value="hindi">Hindi</SelectItem>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="english" className="bg-white focus:bg-neutral-50 data-[state=checked]:bg-white">English</SelectItem>
+                      <SelectItem value="tamil"   className="bg-white focus:bg-neutral-50 data-[state=checked]:bg-white">Tamil</SelectItem>
+                      <SelectItem value="kannada" className="bg-white focus:bg-neutral-50 data-[state=checked]:bg-white">Kannada</SelectItem>
+                      <SelectItem value="hindi"   className="bg-white focus:bg-neutral-50 data-[state=checked]:bg-white">Hindi</SelectItem>
+                      <SelectItem value="telugu"  className="bg-white focus:bg-neutral-50 data-[state=checked]:bg-white">Telugu</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1224,7 +1225,7 @@ export default function WorkflowPage() {
                 <div className="space-y-1.5">
                   <Label className="text-[13px]">Link expiry <span className="text-[#ff5723]">*</span></Label>
                   <Select value={requestLinkExpiry} onValueChange={setRequestLinkExpiry}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full !bg-white">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
