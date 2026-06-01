@@ -56,7 +56,7 @@ export type CreateWorkflowPayload = {
   skillIds: string[];
   verificationMethod: "text" | "voice" | "video";
   mode: "test" | "live";
-  language?: "tamil" | "english" | "kannada" | "hindi";
+  language?: "tamil" | "english" | "kannada" | "hindi" | "telugu";
   projectId?: string;
 };
 
