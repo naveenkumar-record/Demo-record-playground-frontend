@@ -192,10 +192,7 @@ export default function AssessmentsPage() {
           experienceRange: data.experienceRange,
           skills: data.skills,
           questionSetType: data.questionSetType,
-          totalMarks: data.totalMarks,
-          passMarks: data.passMarks,
-          duration: data.duration,
-          difficulty: data.difficulty,
+          // totalMarks, passMarks, duration, difficulty are fixed by the server
         },
         token,
       );

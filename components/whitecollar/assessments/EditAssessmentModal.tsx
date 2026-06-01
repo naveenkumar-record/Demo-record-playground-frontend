@@ -92,6 +92,21 @@ function SkillPickerDialog({
 
   const isSelected = (s: WorkflowSkill) => selectedSkills.some((x) => x.skillId === s.skillId);
 
+  const sortedResults = (() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return results;
+    const rank = (name: string) => {
+      const n = name.toLowerCase();
+      if (n === q)              return 0;
+      if (n.startsWith(q))     return 1;
+      return 2;
+    };
+    return [...results].sort((a, b) => {
+      const diff = rank(a.name) - rank(b.name);
+      return diff !== 0 ? diff : a.name.localeCompare(b.name);
+    });
+  })();
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-[500px] p-0" showCloseButton>
@@ -112,11 +127,11 @@ function SkillPickerDialog({
               </p>
             ) : searching ? (
               <p className="px-4 py-8 text-center text-[13px] text-[#8a8a8a]">Searching…</p>
-            ) : results.length === 0 ? (
+            ) : sortedResults.length === 0 ? (
               <p className="px-4 py-8 text-center text-[13px] text-[#8a8a8a]">No skills found.</p>
             ) : (
               <div className="max-h-64 overflow-y-auto">
-                {results.map((skill) => (
+                {sortedResults.map((skill) => (
                   <label key={skill.skillId}
                     className="flex cursor-pointer items-center gap-3 border-b border-neutral-100 px-4 py-3 last:border-b-0 hover:bg-neutral-50">
                     <Checkbox checked={isSelected(skill)} onCheckedChange={() => {
@@ -147,7 +162,7 @@ export default function EditAssessmentModal({ open, assessment, orgId, onClose, 
 
   const [form,            setForm]            = useState<FormState>({
     name: "", jobTitle: "", jobDescription: "", roleType: "",
-    experienceRange: "", totalMarks: "", passMarks: "", duration: "", difficulty: "",
+    experienceRange: "", totalMarks: "100", passMarks: "60", duration: "75", difficulty: "Medium",
     selectedSkills: [],
   });
   const [saving,          setSaving]          = useState(false);
@@ -163,10 +178,10 @@ export default function EditAssessmentModal({ open, assessment, orgId, onClose, 
       jobDescription:  assessment.jobDescription  ?? "",
       roleType:        assessment.roleType        ?? "",
       experienceRange: assessment.experienceRange ?? "",
-      totalMarks:      assessment.totalMarks != null ? String(assessment.totalMarks) : "",
-      passMarks:       assessment.passMarks  != null ? String(assessment.passMarks)  : "",
-      duration:        assessment.duration   != null ? String(assessment.duration)   : "",
-      difficulty:      assessment.difficulty      ?? "",
+      totalMarks:      assessment.totalMarks != null ? String(assessment.totalMarks) : "100",
+      passMarks:       assessment.passMarks  != null ? String(assessment.passMarks)  : "60",
+      duration:        assessment.duration   != null ? String(assessment.duration)   : "75",
+      difficulty:      assessment.difficulty      || "Medium",
     };
 
     const skillIds = assessment.skills ?? [];
@@ -219,10 +234,7 @@ export default function EditAssessmentModal({ open, assessment, orgId, onClose, 
         roleType:        form.roleType               || undefined,
         experienceRange: form.experienceRange        || undefined,
         skills:          form.selectedSkills.map((s) => s.skillId),
-        totalMarks:      form.totalMarks  ? Number(form.totalMarks)  : undefined,
-        passMarks:       form.passMarks   ? Number(form.passMarks)   : undefined,
-        duration:        form.duration    ? Number(form.duration)    : undefined,
-        difficulty:      form.difficulty  || undefined,
+        // totalMarks, passMarks, duration, difficulty are fixed — not sent
       };
       const token = getAccessToken();
       const res = await updateAssessment(assessment.assessmentId, payload, token);
@@ -346,36 +358,26 @@ export default function EditAssessmentModal({ open, assessment, orgId, onClose, 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-[13px] font-medium text-[#3a3a3a]">Total Marks</Label>
-                <Input type="number" placeholder="eg: 100" value={form.totalMarks}
-                  className="text-[13px]"
-                  onChange={(e) => setForm((p) => ({ ...p, totalMarks: e.target.value }))} />
+                <Input readOnly value={form.totalMarks}
+                  className="cursor-not-allowed bg-neutral-100 text-[13px] text-[#6a6a6a]" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[13px] font-medium text-[#3a3a3a]">Duration (mins)</Label>
-                <Input type="number" placeholder="eg: 75" value={form.duration}
-                  className="text-[13px]"
-                  onChange={(e) => setForm((p) => ({ ...p, duration: e.target.value }))} />
+                <Input readOnly value={form.duration}
+                  className="cursor-not-allowed bg-neutral-100 text-[13px] text-[#6a6a6a]" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-[13px] font-medium text-[#3a3a3a]">Pass Marks</Label>
-                <Input type="number" placeholder="eg: 65" value={form.passMarks}
-                  className="text-[13px]"
-                  onChange={(e) => setForm((p) => ({ ...p, passMarks: e.target.value }))} />
+                <Input readOnly value={form.passMarks}
+                  className="cursor-not-allowed bg-neutral-100 text-[13px] text-[#6a6a6a]" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[13px] font-medium text-[#3a3a3a]">Difficulty</Label>
-                <Select value={form.difficulty} onValueChange={(v) => setForm((p) => ({ ...p, difficulty: v }))}>
-                  <SelectTrigger className="h-10 w-full rounded-xl border-0 bg-neutral-100 text-[13px] shadow-none focus:ring-0 focus:ring-offset-0">
-                    <SelectValue placeholder="Select difficulty" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="w-[--radix-select-trigger-width]">
-                    {DIFFICULTIES.map((d) => (
-                      <SelectItem key={d} value={d} className="text-[13px]">{d}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex h-10 w-full items-center rounded-md bg-neutral-100 px-3 text-[13px] text-[#6a6a6a]">
+                  {form.difficulty}
+                </div>
               </div>
             </div>
 
