@@ -11,12 +11,11 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-
-import { useOrg }      from "@/components/layout/orgContext";
-import { useProject }  from "@/components/layout/projectContext";
+import { useOrg } from "@/components/layout/orgContext";
+import { useProject } from "@/components/layout/projectContext";
 import { useTestMode } from "@/components/layout/testModeContext";
-import { Badge }       from "@/components/ui/badge";
-import { Button }      from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -30,8 +29,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input }  from "@/components/ui/input";
-import { Label }  from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -40,7 +39,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
 import {
   listApiKeys,
   createApiKey,
@@ -48,9 +46,9 @@ import {
   type ApiKey,
   type ApiKeyCreated,
 } from "@/api/api-keys.api";
+import PaginationControl from "@/components/ui/pagination-control";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
 function getAccessToken() {
   if (typeof window === "undefined") return "";
   return localStorage.getItem("auth_access_token") ?? "";
@@ -58,22 +56,28 @@ function getAccessToken() {
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   }).format(new Date(value));
 }
 
 function copyText(text: string, label: string) {
-  navigator.clipboard.writeText(text).then(() => toast.success(`${label} copied`));
+  navigator.clipboard
+    .writeText(text)
+    .then(() => toast.message(`${label} copied`));
 }
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
-
 function SkeletonRow() {
   return (
     <TableRow>
       {[160, 200, 60, 80, 40].map((w, i) => (
         <TableCell key={i} className="px-5 py-4">
-          <div className="h-3.5 animate-pulse rounded bg-neutral-100" style={{ width: w }} />
+          <div
+            className="h-3.5 animate-pulse rounded bg-neutral-100"
+            style={{ width: w }}
+          />
         </TableCell>
       ))}
     </TableRow>
@@ -81,7 +85,6 @@ function SkeletonRow() {
 }
 
 // ── Masked key ────────────────────────────────────────────────────────────────
-
 function MaskedKey({ value }: { value: string }) {
   const [show, setShow] = useState(false);
   const display = show ? value : `${value.slice(0, 8)}${"•".repeat(20)}`;
@@ -93,67 +96,81 @@ function MaskedKey({ value }: { value: string }) {
         className="text-neutral-400 hover:text-neutral-600"
         onClick={() => setShow((v) => !v)}
       >
-        {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+        {show ? (
+          <EyeOff className="h-3.5 w-3.5 cursor-pointer" />
+        ) : (
+          <Eye className="h-3.5 w-3.5 cursor-pointer" />
+        )}
       </button>
       <button
         type="button"
         className="text-neutral-400 hover:text-neutral-600"
         onClick={() => copyText(value, "Key")}
       >
-        <Copy className="h-3.5 w-3.5" />
+        <Copy className="h-3.5 w-3.5 cursor-pointer" />
       </button>
     </div>
   );
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-
 export default function WorkflowsPage() {
-  const { activeOrg }     = useOrg();
+  const { activeOrg } = useOrg();
   const { activeProject } = useProject();
-  const { isTestMode }    = useTestMode();
-
-  const orgId     = activeOrg?.orgId;
+  const { isTestMode } = useTestMode();
+  const orgId = activeOrg?.orgId;
   const projectId = activeProject?.projectId ?? undefined;
-  const mode      = isTestMode ? "test" : "live";
-
-  const [keys,    setKeys]    = useState<ApiKey[]>([]);
+  const mode = isTestMode ? "test" : "live";
+  const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(false);
-
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
   // Create modal
   const [createOpen, setCreateOpen] = useState(false);
-  const [keyName,    setKeyName]    = useState("");
-  const [saving,     setSaving]     = useState(false);
-
+  const [keyName, setKeyName] = useState("");
+  const [saving, setSaving] = useState(false);
   // Reveal modal (shown once after creation)
-  const [revealOpen,   setRevealOpen]   = useState(false);
-  const [revealedKey,  setRevealedKey]  = useState<ApiKeyCreated | null>(null);
-
+  const [revealOpen, setRevealOpen] = useState(false);
+  const [revealedKey, setRevealedKey] = useState<ApiKeyCreated | null>(null);
   // ── Fetch ──────────────────────────────────────────────────────────────────
-
   const fetchKeys = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
     try {
-      const res = await listApiKeys(orgId, getAccessToken(), projectId, undefined, mode as "test" | "live");
+      const res = await listApiKeys(
+        orgId,
+        getAccessToken(),
+        projectId,
+        undefined,
+        mode as "test" | "live",
+      );
       setKeys(res.data ?? []);
+      setPage(1);
     } catch {
-      toast.error("Failed to load API keys");
+      toast.message("Failed to load API keys");
     } finally {
       setLoading(false);
     }
   }, [orgId, projectId, mode]);
 
-  useEffect(() => { fetchKeys(); }, [fetchKeys]);
+  useEffect(() => {
+    fetchKeys();
+  }, [fetchKeys]);
 
   // ── Create ─────────────────────────────────────────────────────────────────
-
   const handleCreate = async () => {
     if (!orgId) return;
-    if (!keyName.trim()) { toast.error("Key name is required"); return; }
+    if (!keyName.trim()) {
+      toast.message("Key name is required");
+      return;
+    }
     setSaving(true);
     try {
-      const res = await createApiKey(orgId, { name: keyName.trim(), mode, projectId }, getAccessToken());
+      const res = await createApiKey(
+        orgId,
+        { name: keyName.trim(), mode, projectId },
+        getAccessToken(),
+      );
       const created = res.data;
       if (created) {
         setKeys((prev) => [created, ...prev]);
@@ -163,58 +180,61 @@ export default function WorkflowsPage() {
         setRevealOpen(true);
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to create API key");
+      toast.message(
+        err instanceof Error ? err.message : "Failed to create API key",
+      );
     } finally {
       setSaving(false);
     }
   };
 
   // ── Delete ─────────────────────────────────────────────────────────────────
-
   const handleDelete = async (keyId: string) => {
     if (!orgId) return;
     setKeys((prev) => prev.filter((k) => k.keyId !== keyId));
     try {
       await deleteApiKey(orgId, keyId, getAccessToken());
-      toast.success("API key deleted");
+      toast.message("API key deleted Successfully");
     } catch {
-      toast.error("Failed to delete API key");
+      toast.message("Failed to delete API key");
       fetchKeys();
     }
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const totalPages = Math.max(1, Math.ceil(keys.length / PAGE_SIZE));
+  const pagedKeys = keys.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="space-y-8 p-6">
-
       {/* ── API Keys section ─────────────────────────────────────────────── */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[16px] font-semibold text-[#1f1f1f]">API Keys</h1>
-            <p className="mt-0.5 text-[12px] text-[#9a9a9a]">
-              Use these keys to integrate with the Record Studio API.
-            </p>
+            <h1 className="text-[16px] font-semibold text-[#1f1f1f]">
+              API Keys
+            </h1>
           </div>
           <Button
             className="h-10 gap-2 bg-[#ff5723] px-5 text-[13px] font-semibold text-white hover:bg-[#f04d1d]"
-            onClick={() => { setKeyName(""); setCreateOpen(true); }}
+            onClick={() => {
+              setKeyName("");
+              setCreateOpen(true);
+            }}
           >
             <Plus className="h-4 w-4" />
             Create API Key
           </Button>
         </div>
 
-        <div className="overflow-hidden rounded-md border border-neutral-200 bg-white">
+        <div className="overflow-hidden rounded-md border border-neutral-200 bg-white [&_th]:px-6 [&_th]:py-4 [&_td]:px-6">
           <Table>
             <TableHeader>
-              <TableRow className="bg-white hover:bg-white">
-                <TableHead className="h-12 px-5 text-[13px] font-medium text-[#7a7a7a]">Name</TableHead>
-                <TableHead className="text-[13px] font-medium text-[#7a7a7a]">API Key</TableHead>
-                <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Mode</TableHead>
-                <TableHead className="text-[13px] font-medium text-[#7a7a7a]">Created</TableHead>
-                <TableHead className="pr-5 text-right text-[13px] font-medium text-[#7a7a7a]">Actions</TableHead>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead className="w-[380px]">API Key</TableHead>
+                <TableHead>Mode</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -223,19 +243,24 @@ export default function WorkflowsPage() {
               ) : keys.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5}>
-                    <div className="flex flex-col items-center justify-center gap-3 py-16">
+                    <div className="flex flex-col items-center justify-center gap-3 py-10">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100">
                         <Key className="h-5 w-5 text-neutral-400" />
                       </div>
                       <div className="text-center">
-                        <p className="text-[13px] font-medium text-[#1f1f1f]">No API keys yet</p>
+                        <p className="text-[13px] font-medium text-[#1f1f1f]">
+                          No API keys yet
+                        </p>
                         <p className="mt-1 text-[12px] text-[#9a9a9a]">
                           Create an API key to start integrating with the API.
                         </p>
                       </div>
                       <Button
                         className="mt-1 h-9 gap-2 bg-[#ff5723] px-4 text-[13px] font-semibold text-white hover:bg-[#f04d1d]"
-                        onClick={() => { setKeyName(""); setCreateOpen(true); }}
+                        onClick={() => {
+                          setKeyName("");
+                          setCreateOpen(true);
+                        }}
                       >
                         <Plus className="h-4 w-4" />
                         Create API Key
@@ -244,20 +269,27 @@ export default function WorkflowsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                keys.map((k) => (
+                pagedKeys.map((k) => (
                   <TableRow key={k.keyId}>
-                    <TableCell className="px-5 py-4">
-                      <p className="text-[13px] font-semibold text-[#1f1f1f]">{k.name}</p>
-                      <p className="mt-0.5 text-[11px] text-[#aaa]">{k.keyId}</p>
-                    </TableCell>
                     <TableCell>
+                      <p className="text-[13px] font-semibold text-[#1f1f1f]">
+                        {k.name}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-[#aaa]">
+                        {k.keyId}
+                      </p>
+                    </TableCell>
+                    <TableCell className="w-[380px]">
                       <MaskedKey value={k.apiKey} />
                     </TableCell>
                     <TableCell>
-                      <Badge className={k.mode === "live"
-                        ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-50 text-[11px] font-medium"
-                        : "bg-amber-50 text-amber-600 hover:bg-amber-50 text-[11px] font-medium"
-                      }>
+                      <Badge
+                        className={
+                          k.mode === "live"
+                            ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-50 text-[11px] font-medium"
+                            : "bg-amber-50 text-amber-600 hover:bg-amber-50 text-[11px] font-medium"
+                        }
+                      >
                         {k.mode}
                       </Badge>
                     </TableCell>
@@ -267,13 +299,17 @@ export default function WorkflowsPage() {
                     <TableCell className="pr-5 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <MoreVertical className="h-4 w-4 text-[#697282]" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40">
                           <DropdownMenuItem
-                            className="text-[13px] text-red-500 focus:text-red-500"
+                            className="text-sm text-black"
                             onClick={() => handleDelete(k.keyId)}
                           >
                             <Trash2 className="mr-2 h-3.5 w-3.5" />
@@ -287,49 +323,74 @@ export default function WorkflowsPage() {
               )}
             </TableBody>
           </Table>
-          {keys.length > 0 && (
-            <div className="border-t border-neutral-200 px-5 py-4 text-[12px] text-[#7a7a7a]">
-              {keys.length} key{keys.length !== 1 ? "s" : ""}
-            </div>
-          )}
         </div>
+        {/* ── Footer: count + pagination ───────────────────────────────────── */}
+        {!loading && keys.length > 0 && (
+          <div className="flex items-center justify-end  px-1 pt-1">
+            
+            <PaginationControl
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={(p) => setPage(p)}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Create API Key modal ─────────────────────────────────────────── */}
-      <Dialog open={createOpen} onOpenChange={(o) => { if (!saving) setCreateOpen(o); }}>
+      <Dialog
+        open={createOpen}
+        onOpenChange={(o) => {
+          if (!saving) setCreateOpen(o);
+        }}
+      >
         <DialogContent className="max-w-[420px] p-0">
           <DialogHeader className="border-b border-neutral-200 px-5 py-4">
-            <DialogTitle className="text-[16px] font-semibold">Create API Key</DialogTitle>
-            <p className="text-[12px] text-[#8a8a8a]">
-              Give this key a name. The secret key will be shown once — save it somewhere safe.
+            <DialogTitle className="text-md font-semibold">
+              Create API Key
+            </DialogTitle>
+            <p className="text-xs text-[#8a8a8a]">
+              Enter a name for this key. The secret key will only be displayed
+              once, so be sure to save it securely before proceeding.{" "}
             </p>
           </DialogHeader>
 
-          <div className="space-y-4 px-5 py-4">
+          <div className="space-y-4 px-5 py-1">
             <div className="space-y-2">
-              <Label className="text-[13px] text-[#6a6a6a]">Key Name</Label>
+              <Label className="text-sm text-[#6a6a6a]">Key Name</Label>
               <Input
                 value={keyName}
                 placeholder="e.g. Production Integration"
                 autoFocus
                 onChange={(e) => setKeyName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCreate();
+                }}
               />
             </div>
-            <div className="flex items-center gap-2 rounded-md bg-neutral-50 px-3 py-2 text-[12px] text-[#6a6a6a]">
+            <div className="flex items-center gap-2 rounded-md bg-neutral-50 px-3 py-2 text-sm text-[#6a6a6a]">
               <span className="font-medium">Mode:</span>
-              <Badge className={mode === "live"
-                ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-50 text-[11px]"
-                : "bg-amber-50 text-amber-600 hover:bg-amber-50 text-[11px]"
-              }>
+              <Badge
+                className={
+                  mode === "live"
+                    ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-50 text-sm"
+                    : "bg-amber-50 text-amber-600 hover:bg-amber-50 text-sm"
+                }
+              >
                 {mode}
               </Badge>
-              <span className="text-[11px] text-[#9a9a9a]">(from your current mode toggle)</span>
+              <span className="text-sm text-[#9a9a9a]">
+                (from your current mode toggle)
+              </span>
             </div>
           </div>
 
           <DialogFooter className="border-t border-neutral-200 px-5 py-4">
-            <Button variant="outline" disabled={saving} onClick={() => setCreateOpen(false)}>
+            <Button
+              variant="outline"
+              disabled={saving}
+              onClick={() => setCreateOpen(false)}
+            >
               Cancel
             </Button>
             <Button
@@ -348,19 +409,23 @@ export default function WorkflowsPage() {
       <Dialog open={revealOpen} onOpenChange={setRevealOpen}>
         <DialogContent className="max-w-[480px] p-0">
           <DialogHeader className="border-b border-neutral-200 px-5 py-4">
-            <DialogTitle className="text-[16px] font-semibold">Your new API Key</DialogTitle>
+            <DialogTitle className="text-[16px] font-semibold">
+              Your new API Key
+            </DialogTitle>
             <p className="text-[12px] text-[#e05a00] font-medium">
-              ⚠ Copy your secret key now — it will never be shown again.
+              Your secret key is shown only once. Copy and store it securely
+              before continuing.{" "}
             </p>
           </DialogHeader>
 
           {revealedKey && (
-            <div className="space-y-4 px-5 py-4">
-              {/* API Key */}
+            <div className="space-y-4 px-5 py-2">
               <div className="space-y-1.5">
-                <Label className="text-[12px] text-[#6a6a6a]">API Key (public)</Label>
+                <Label className="text-sm text-[#6a6a6a]">
+                  API Key (public)
+                </Label>
                 <div className="flex items-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2">
-                  <code className="flex-1 break-all font-mono text-[12px] text-[#1f1f1f]">
+                  <code className="flex-1 break-all font-mono text-sm text-[#1f1f1f]">
                     {revealedKey.apiKey}
                   </code>
                   <button
@@ -375,22 +440,23 @@ export default function WorkflowsPage() {
 
               {/* Secret Key */}
               <div className="space-y-1.5">
-                <Label className="text-[12px] text-[#6a6a6a]">Secret Key (shown once)</Label>
+                <Label className="text-sm text-[#6a6a6a]">
+                  Secret Key (shown once)
+                </Label>
                 <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2">
-                  <code className="flex-1 break-all font-mono text-[12px] text-[#9f1239]">
+                  <code className="flex-1 break-all font-mono text-sm text-[#9f1239]">
                     {revealedKey.secretKey}
                   </code>
                   <button
                     type="button"
                     className="shrink-0 text-red-300 hover:text-red-500"
-                    onClick={() => copyText(revealedKey.secretKey, "Secret key")}
+                    onClick={() =>
+                      copyText(revealedKey.secretKey, "Secret key")
+                    }
                   >
                     <Copy className="h-4 w-4" />
                   </button>
                 </div>
-                <p className="text-[11px] text-[#9a9a9a]">
-                  Store this in an environment variable. It cannot be retrieved later.
-                </p>
               </div>
             </div>
           )}
@@ -401,12 +467,11 @@ export default function WorkflowsPage() {
               className="hover:opacity-90"
               onClick={() => setRevealOpen(false)}
             >
-              Done, I've saved it
+              Continue
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
