@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
+import { Inter } from "next/font/google";
 import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 import AppToaster from "@/components/ui/app-toaster";
 import GoogleProvider from "@/components/auth/googleProvider";
 
@@ -18,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={GeistSans.variable}>
+    <html lang="en" className={inter.variable}>
       <body className="antialiased font-sans">
         <GoogleProvider>
           {children}

@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import PaginationControl from "@/components/ui/pagination-control";
 
 import CreateAssessmentModal, {
   type CreateAssessmentResult,
@@ -124,6 +125,8 @@ export default function AssessmentsPage() {
   const [assessments, setAssessments] = useState<AssessmentItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   // ── Modal state ─────────────────────────────────────────────────────────────
   const [modalOpen,  setModalOpen]  = useState(false);
@@ -134,10 +137,9 @@ export default function AssessmentsPage() {
 
   const abortRef = useRef<AbortController | null>(null);
 
-  const fetchAssessments = useCallback(async () => {
+  const fetchAssessments = useCallback(async (p = 1) => {
     if (!orgId) return;
 
-    // Cancel any in-flight request before starting a new one
     abortRef.current?.abort();
     const controller  = new AbortController();
     abortRef.current  = controller;
@@ -146,7 +148,7 @@ export default function AssessmentsPage() {
     try {
       const token = getAccessToken();
       const res   = await listAssessments(
-        orgId, 1, 100, mode, token, projectId, controller.signal,
+        orgId, p, PAGE_SIZE, mode, token, projectId, controller.signal,
       );
       if (!controller.signal.aborted) {
         setAssessments(res.data?.assessments ?? []);
@@ -161,10 +163,11 @@ export default function AssessmentsPage() {
         setLoading(false);
       }
     }
-  }, [orgId, mode, projectId]);
+  }, [orgId, mode, projectId, PAGE_SIZE]);
 
   useEffect(() => {
-    fetchAssessments();
+    setPage(1);
+    fetchAssessments(1);
   }, [fetchAssessments]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
@@ -272,25 +275,15 @@ export default function AssessmentsPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-md border border-neutral-200 bg-white">
+      <div className="overflow-hidden rounded-md border border-neutral-200 bg-white [&_th]:px-6 [&_th]:py-4 [&_td]:px-6">
         <Table>
           <TableHeader>
-            <TableRow className="bg-white hover:bg-white">
-              <TableHead className="h-12 px-5 text-[13px] font-medium text-[#7a7a7a]">
-                Assessment Name
-              </TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
-                Type
-              </TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
-                Status
-              </TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
-                Created
-              </TableHead>
-              <TableHead className="pr-5 text-right text-[13px] font-medium text-[#7a7a7a]">
-                Actions
-              </TableHead>
+            <TableRow>
+              <TableHead>Assessment Name</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -303,7 +296,7 @@ export default function AssessmentsPage() {
               assessments.map((assessment) => (
                 <TableRow key={assessment.assessmentId}>
                   {/* Name + ID */}
-                  <TableCell className="px-5 py-4">
+                  <TableCell>
                     <p className="text-[13px] font-semibold text-[#1f1f1f]">
                       {assessment.name}
                     </p>
@@ -390,18 +383,20 @@ export default function AssessmentsPage() {
               ))
             )}
           </TableBody>
-        </Table>
-
-        {/* Footer */}
-        {assessments.length > 0 && (
-          <div className="flex items-center justify-between border-t border-neutral-200 px-5 py-4 text-[12px] text-[#7a7a7a]">
-            <p>
-              Showing {assessments.length} of {total} Assessment
-              {total === 1 ? "" : "s"}
-            </p>
+        </Table>        
+      </div>
+      {!loading && total > 0 && (
+          <div className="flex items-center justify-end px-5 py-4">
+            <PaginationControl
+              currentPage={page}
+              totalPages={Math.max(1, Math.ceil(total / PAGE_SIZE))}
+              onPageChange={(p) => {
+                setPage(p);
+                fetchAssessments(p);
+              }}
+            />
           </div>
         )}
-      </div>
 
       {/* Create Assessment Modal */}
       <CreateAssessmentModal

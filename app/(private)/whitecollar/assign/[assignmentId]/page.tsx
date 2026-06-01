@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { ExternalLink, Users } from "lucide-react";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { getAssignmentDetail, type AssignmentItem, type CandidateRecord } from "@/api/assessmentAssignment.api";
 import { listAssessments } from "@/api/assessment.api";
 import { useOrg } from "@/components/layout/orgContext";
+import PaginationControl from "@/components/ui/pagination-control";
+
+const PAGE_SIZE = 10;
 
 const ASSESSMENT_PORTAL_URL = process.env.NEXT_PUBLIC_ASSESSMENT_PORTAL_URL ?? "";
 
@@ -21,32 +27,29 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-// ── Result badge (Pass / Fail / Not Yet) ──────────────────────────────────────
-
 function ResultBadge({ passed }: { passed?: boolean }) {
   if (passed === true) {
     return (
-      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
+      <span className="inline-flex items-center rounded-lg bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-600">
         Pass
       </span>
     );
   }
   if (passed === false) {
     return (
-      <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-[11px] font-semibold text-red-500">
+      <span className="inline-flex items-center rounded-lg bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-500">
         Fail
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-[11px] font-medium text-neutral-500">
-      Not Yet
+    <span className="inline-flex items-center rounded-lg bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-500">
+      Pending
     </span>
   );
 }
 
 // ── Status badge ──────────────────────────────────────────────────────────────
-
 const STATUS_STYLE: Record<CandidateRecord["status"], string> = {
   pending:   "bg-neutral-100 text-neutral-500",
   started:   "bg-amber-50 text-amber-600",
@@ -57,15 +60,14 @@ const STATUS_STYLE: Record<CandidateRecord["status"], string> = {
 function StatusBadge({ status }: { status: CandidateRecord["status"] }) {
   return (
     <span className={cn(
-      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize",
+      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
       STATUS_STYLE[status],
     )}>
-      {status}
+      {status.replace(/_/g, " ")}
     </span>
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AssignmentDetailPage() {
   const params       = useParams();
@@ -75,6 +77,7 @@ export default function AssignmentDetailPage() {
   const [assignment,      setAssignment]      = useState<AssignmentItem | null>(null);
   const [assessmentName,  setAssessmentName]  = useState("");
   const [loading,         setLoading]         = useState(true);
+  const [currentPage,     setCurrentPage]     = useState(1);
 
   useEffect(() => {
     if (!activeOrg?.orgId) return;
@@ -101,6 +104,14 @@ export default function AssignmentDetailPage() {
     });
   }, [activeOrg?.orgId, assignmentId]);
 
+  // ── All hooks must run before early returns ───────────────────────────────
+  const candidates     = assignment?.candidates ?? [];
+  const totalPages     = Math.max(1, Math.ceil(candidates.length / PAGE_SIZE));
+  const paginated      = useMemo(
+    () => candidates.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [candidates, currentPage],
+  );
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f9f9f9]">
@@ -117,97 +128,117 @@ export default function AssignmentDetailPage() {
     );
   }
 
-  const { candidates, assessmentId, batchName, totalCandidates, tag } = assignment;
-
+  const { assessmentId, batchName, totalCandidates, tag } = assignment;
   const completed = candidates.filter((c) => c.status === "completed").length;
 
   return (
-    <div className="min-h-screen bg-[#f9f9f9] p-8">
+    <div className="min-h-screen p-8">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-[20px] font-semibold text-[#1f1f1f]">{batchName}</h1>
-        <p className="mt-0.5 text-[13px] text-[#8a8a8a]">
-          {assessmentName} {tag ? `· ${tag}` : ""}
+      <div className="mb-8">
+        <h1 className="text-[22px] font-semibold text-[#1f1f1f]">{batchName}</h1>
+        <p className="mt-1 text-[13px] text-[#8a8a8a]">
+          {assessmentName}{tag ? ` · ${tag}` : ""}
         </p>
 
         {/* Stats row */}
-        <div className="mt-4 flex gap-6">
-          <div className="flex items-center gap-2">
+        <div className="mt-5 flex items-center gap-1">
+          <div className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2">
             <Users className="h-4 w-4 text-neutral-400" />
             <span className="text-[13px] text-[#4a4a4a]">
-              <strong>{totalCandidates}</strong> candidates
+              <strong className="text-[#1f1f1f]">{totalCandidates}</strong> candidates
             </span>
           </div>
-          <div className="text-[13px] text-[#4a4a4a]">
-            <strong className="text-emerald-600">{completed}</strong> completed
+          <div className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            <span className="text-[13px] text-[#4a4a4a]">
+              <strong className="text-emerald-600">{completed}</strong> completed
+            </span>
           </div>
-          <div className="text-[13px] text-[#4a4a4a]">
-            <strong>{totalCandidates - completed}</strong> pending / in progress
+          <div className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2">
+            <span className="h-2 w-2 rounded-full bg-amber-400" />
+            <span className="text-[13px] text-[#4a4a4a]">
+              <strong className="text-[#1f1f1f]">{totalCandidates - completed}</strong> pending / in progress
+            </span>
           </div>
         </div>
       </div>
 
       {/* Candidate table */}
-      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-neutral-100 bg-neutral-50">
-              <th className="px-6 py-3 text-left text-[12px] font-medium text-[#7a7a7a]">Name</th>
-              <th className="px-6 py-3 text-left text-[12px] font-medium text-[#7a7a7a]">Email</th>
-              <th className="px-6 py-3 text-left text-[12px] font-medium text-[#7a7a7a]">Status</th>
-              <th className="px-6 py-3 text-left text-[12px] font-medium text-[#7a7a7a]">Result</th>
-              <th className="px-6 py-3 text-left text-[12px] font-medium text-[#7a7a7a]">Assigned</th>
-              <th className="px-6 py-3 text-right text-[12px] font-medium text-[#7a7a7a]">Report</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="rounded-md border border-neutral-200 bg-white [&_th]:px-6 [&_th]:py-4 [&_td]:px-6">
+        <Table>
+          <TableHeader className="bg-neutral-50">
+            <TableRow>
+              <TableHead className="w-[220px]">Name</TableHead>
+              <TableHead className="w-[130px]">Email</TableHead>
+              <TableHead className="w-[130px]">Status</TableHead>
+              <TableHead className="w-[110px]">Result</TableHead>
+              <TableHead className="w-[140px]">Assigned</TableHead>
+              <TableHead className="w-[150px]">Report</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {candidates.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-16 text-center text-[13px] text-[#9a9a9a]">
+              <TableRow>
+                <TableCell colSpan={6} className="py-16 text-center text-[13px] text-[#9a9a9a]">
                   No candidates in this batch.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
-              candidates.map((c) => (
-                <tr
-                  key={c.candidateId}
-                  className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50"
-                >
-                  <td className="px-6 py-4 text-[13px] font-medium text-[#1f1f1f]">{c.name}</td>
-                  <td className="px-6 py-4 text-[13px] text-[#6a6a6a]">{c.email}</td>
-                  <td className="px-6 py-4">
+              paginated.map((c) => (
+                <TableRow key={c.candidateId}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-[12px] font-semibold text-[#5a5a5a]">
+                        {c.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-[13px] font-medium text-[#1f1f1f]">{c.name}</span>
+                    </div>
+                  </TableCell>
+
+                  <TableCell className="text-[13px] text-[#6a6a6a]">{c.email}</TableCell>
+
+                  <TableCell>
                     <StatusBadge status={c.status} />
-                  </td>
-                  <td className="px-6 py-4">
+                  </TableCell>
+
+                  <TableCell>
                     <ResultBadge passed={c.passed} />
-                  </td>
-                  <td className="px-6 py-4 text-[12px] text-[#9a9a9a]">
+                  </TableCell>
+
+                  <TableCell className="text-[13px] text-[#6a6a6a]">
                     {formatDate(c.assignedAt)}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <a
-                      href={`${ASSESSMENT_PORTAL_URL}/assessment/${assessmentId}/report/${c.candidateId}`}
-                      onClick={(e) => c.status !== "completed" && e.preventDefault()}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors",
-                        c.status === "completed"
-                          ? "bg-[#ff5723] text-white hover:bg-[#f04d1d]"
-                          : "cursor-not-allowed bg-neutral-100 text-neutral-400",
-                      )}
-                    >
-                      View Report
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </td>
-                </tr>
+                  </TableCell>
+
+                  <TableCell>
+                    {c.status === "completed" ? (
+                      <a
+                        href={`${ASSESSMENT_PORTAL_URL}/assessment/${assessmentId}/report/${c.candidateId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-[12px] font-medium text-[#1f1f1f] transition-colors hover:bg-neutral-50"
+                      >
+                        View Report
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span className="text-[13px] text-[#bbb]">—</span>
+                    )}
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
 
-        <div className="border-t border-neutral-100 px-6 py-4 text-[12px] text-[#9a9a9a]">
-          Showing {candidates.length} candidate{candidates.length !== 1 ? "s" : ""}
-        </div>
+      </div>
+
+      {/* Pagination — outside the table */}
+      <div className="mt-4 flex items-center justify-end">
+        <PaginationControl
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(p) => setCurrentPage(p)}
+        />
       </div>
     </div>
   );
