@@ -128,3 +128,16 @@ export const createWorkflowCandidates = (
     { candidates, language },
     { accessToken },
   );
+
+export const checkWhatsAppNumber = (
+  phoneNumber: string,
+  accessToken: string,
+) =>
+  postRequest<
+    { isOnWhatsApp: boolean; phoneNumber: string },
+    { phoneNumber: string }
+  >(
+    `${apiPathConstants.workflows.base}/check-whatsapp`,
+    { phoneNumber },
+    { accessToken },
+  );
