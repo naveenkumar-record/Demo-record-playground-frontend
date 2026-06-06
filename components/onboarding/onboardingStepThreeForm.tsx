@@ -17,6 +17,8 @@ type OnboardingStepThreeFormProps = {
   orgId: string;
 };
 
+
+
 const isValidEmail = (value: string): boolean => /\S+@\S+\.\S+/.test(value);
 
 export default function OnboardingStepThreeForm({
