@@ -28,7 +28,12 @@ export const listApiKeys = (
 
 export const createApiKey = (
   orgId: string,
-  data: { name: string; mode: "test" | "live"; projectId?: string },
+  data: {
+    name: string;
+    mode: "test" | "live";
+    projectId?: string;
+    emailNotificationsEnabled?: boolean;
+  },
   accessToken: string,
 ) =>
   postRequest<ApiKeyCreated>(apiPathConstants.apiKeys.base, data, {
