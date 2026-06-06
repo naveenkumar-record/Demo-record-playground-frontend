@@ -61,7 +61,10 @@ export type CreateAssessmentResult = {
   experienceRange?: string;
   skills?: string[];
   questionSetType?: string;
-  // totalMarks, passMarks, duration, difficulty are fixed by the server (100 / 60 / 75 / Medium)
+  totalMarks?: number;
+  passMarks?: number;
+  duration?: number;
+  difficulty?: string;
 };
 
 type Props = {
@@ -166,27 +169,7 @@ function SkillPickerDialog({
   const abortRef = useRef<AbortController | null>(null);
 
   const trimmedQuery = query.trim();
-
-  // Sort: exact match first → starts-with → contains → alphabetical
-  const sortSkills = (list: WorkflowSkill[], q: string): WorkflowSkill[] => {
-    if (!q) return [...list].sort((a, b) => a.name.localeCompare(b.name));
-    const lower = q.toLowerCase();
-    const rank = (name: string) => {
-      const n = name.toLowerCase();
-      if (n === lower)           return 0; // exact
-      if (n.startsWith(lower))   return 1; // starts-with
-      return 2;                            // contains
-    };
-    return [...list].sort((a, b) => {
-      const diff = rank(a.name) - rank(b.name);
-      return diff !== 0 ? diff : a.name.localeCompare(b.name);
-    });
-  };
-
-  const displayedResults = sortSkills(
-    trimmedQuery.length < 1 ? initialSkills : results,
-    trimmedQuery,
-  );
+  const displayedResults = trimmedQuery.length < 1 ? initialSkills : results;
 
   const handleClose = () => {
     initialAbortRef.current?.abort();
@@ -729,9 +712,11 @@ function AiStep2Content({
             Total Marks
           </Label>
           <Input
-            readOnly
+            type="number"
+            placeholder="eg: 100"
             value={form.totalMarks}
-            className="cursor-not-allowed bg-neutral-100 text-[13px] text-[#6a6a6a]"
+            className="text-[13px]"
+            onChange={(e) => onChange("totalMarks", e.target.value)}
           />
         </div>
         <div className="space-y-1.5">
@@ -739,9 +724,12 @@ function AiStep2Content({
             Duration
           </Label>
           <Input
-            readOnly
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="eg: 75"
             value={form.duration}
-            className="cursor-not-allowed bg-neutral-100 text-[13px] text-[#6a6a6a]"
+            className="text-[13px]"
+            onChange={(e) => onChange("duration", numbersOnly(e.target.value))}
           />
         </div>
       </div>
@@ -751,18 +739,42 @@ function AiStep2Content({
             Pass Marks
           </Label>
           <Input
-            readOnly
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="eg: 65"
             value={form.passMarks}
-            className="cursor-not-allowed bg-neutral-100 text-[13px] text-[#6a6a6a]"
+            className={cn(
+              "text-[13px]",
+              errors.passMarks && "border-red-400 focus-visible:border-red-400",
+            )}
+            onChange={(e) => onChange("passMarks", numbersOnly(e.target.value))}
           />
+          {errors.passMarks && (
+            <p className="text-[11px] text-red-500">{errors.passMarks}</p>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-[#3a3a3a]">
             Difficulty
           </Label>
-          <div className="flex h-10 w-full items-center rounded-md bg-neutral-100 px-3 text-[13px] text-[#6a6a6a]">
-            {form.difficulty}
-          </div>
+          <Select
+            value={form.difficulty}
+            onValueChange={(v) => onChange("difficulty", v)}
+          >
+            <SelectTrigger className="h-10 w-full rounded-xl border-0 bg-neutral-100 text-[13px] text-foreground shadow-none focus:ring-0 focus:ring-offset-0 data-[placeholder]:text-muted-foreground">
+              <SelectValue placeholder="Select Difficulty level" />
+            </SelectTrigger>
+            <SelectContent
+              position="popper"
+              className="w-[--radix-select-trigger-width]"
+            >
+              {DIFFICULTIES.map((d) => (
+                <SelectItem key={d} value={d} className="text-[13px]">
+                  {d}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>
@@ -882,9 +894,11 @@ function CustomStep1Content({
             Total Marks
           </Label>
           <Input
-            readOnly
+            type="number"
+            placeholder="eg: 100"
             value={form.totalMarks}
-            className="cursor-not-allowed bg-neutral-100 text-[13px] text-[#6a6a6a]"
+            className="text-[13px]"
+            onChange={(e) => onChange("totalMarks", e.target.value)}
           />
         </div>
         <div className="space-y-1.5">
@@ -892,9 +906,12 @@ function CustomStep1Content({
             Duration
           </Label>
           <Input
-            readOnly
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="eg: 75"
             value={form.duration}
-            className="cursor-not-allowed bg-neutral-100 text-[13px] text-[#6a6a6a]"
+            className="text-[13px]"
+            onChange={(e) => onChange("duration", numbersOnly(e.target.value))}
           />
         </div>
       </div>
@@ -904,18 +921,42 @@ function CustomStep1Content({
             Pass Marks
           </Label>
           <Input
-            readOnly
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="eg: 65"
             value={form.passMarks}
-            className="cursor-not-allowed bg-neutral-100 text-[13px] text-[#6a6a6a]"
+            className={cn(
+              "text-[13px]",
+              errors.passMarks && "border-red-400 focus-visible:border-red-400",
+            )}
+            onChange={(e) => onChange("passMarks", numbersOnly(e.target.value))}
           />
+          {errors.passMarks && (
+            <p className="text-[11px] text-red-500">{errors.passMarks}</p>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label className="text-[13px] font-medium text-[#3a3a3a]">
             Difficulty
           </Label>
-          <div className="flex h-10 w-full items-center rounded-md bg-neutral-100 px-3 text-[13px] text-[#6a6a6a]">
-            {form.difficulty}
-          </div>
+          <Select
+            value={form.difficulty}
+            onValueChange={(v) => onChange("difficulty", v)}
+          >
+            <SelectTrigger className="h-10 w-full rounded-xl border-0 bg-neutral-100 text-[13px] text-foreground shadow-none focus:ring-0 focus:ring-offset-0 data-[placeholder]:text-muted-foreground">
+              <SelectValue placeholder="Select Difficulty level" />
+            </SelectTrigger>
+            <SelectContent
+              position="popper"
+              className="w-[--radix-select-trigger-width]"
+            >
+              {DIFFICULTIES.map((d) => (
+                <SelectItem key={d} value={d} className="text-[13px]">
+                  {d}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>
@@ -934,10 +975,10 @@ const EMPTY_AI1: AiStep1Form = {
 };
 const EMPTY_AI2: AiStep2Form = {
   questionSetType: "",
-  totalMarks: "100",
-  duration: "75",
-  passMarks: "60",
-  difficulty: "Medium",
+  totalMarks: "",
+  duration: "",
+  passMarks: "",
+  difficulty: "",
 };
 const EMPTY_C1: CustomStep1Form = {
   name: "",
@@ -945,10 +986,10 @@ const EMPTY_C1: CustomStep1Form = {
   roleType: "",
   experienceRange: "",
   selectedSkills: [],
-  totalMarks: "100",
-  duration: "75",
-  passMarks: "60",
-  difficulty: "Medium",
+  totalMarks: "",
+  duration: "",
+  passMarks: "",
+  difficulty: "",
 };
 
 export default function CreateAssessmentModal({
@@ -1062,6 +1103,10 @@ export default function CreateAssessmentModal({
       experienceRange: aiStep1.experienceRange,
       skills: aiStep1.selectedSkills.map((s) => s.skillId),
       questionSetType: aiStep2.questionSetType,
+      totalMarks: parseMarks(aiStep2.totalMarks),
+      passMarks: parseMarks(aiStep2.passMarks),
+      duration: aiStep2.duration ? Number(aiStep2.duration) : undefined,
+      difficulty: aiStep2.difficulty,
     });
     setStep("success");
   };
@@ -1077,6 +1122,10 @@ export default function CreateAssessmentModal({
       roleType: customStep1.roleType || undefined,
       experienceRange: customStep1.experienceRange || undefined,
       skills: customStep1.selectedSkills.map((s) => s.skillId),
+      totalMarks: parseMarks(customStep1.totalMarks),
+      passMarks: parseMarks(customStep1.passMarks),
+      duration: customStep1.duration ? Number(customStep1.duration) : undefined,
+      difficulty: customStep1.difficulty || undefined,
     });
     if (assessmentId) {
       handleClose();
