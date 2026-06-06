@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import states from "@/constants/location.constants";
 
 import {
+  checkWhatsAppNumber,
   createWorkflow,
   createWorkflowCandidates,
   listWorkflows,
@@ -155,6 +156,9 @@ export default function WorkflowPage() {
   const [requestLinkExpiry, setRequestLinkExpiry] = useState("7 Days");
   const [csvCandidates, setCsvCandidates] = useState<{ name: string; phoneNumber: string; role?: string }[]>([]);
   const [sendingRequest, setSendingRequest] = useState(false);
+  const [whatsappChecking, setWhatsappChecking] = useState(false);
+  const [whatsappValid, setWhatsappValid] = useState<boolean | null>(null);
+  const [csvWhatsAppStatus, setCsvWhatsAppStatus] = useState<Record<string, boolean | "checking">>({});
   const [step, setStep] = useState<1 | 2>(1);
   const [skillPickerOpen, setSkillPickerOpen] = useState(false);
   const [skillQuery, setSkillQuery] = useState("");
@@ -361,13 +365,47 @@ export default function WorkflowPage() {
     setRequestLanguage("english");
     setRequestLinkExpiry("7 Days");
     setCsvCandidates([]);
+    setCsvWhatsAppStatus({});
     setRequestOpen(true);
   };
 
-  const addManualCandidate = () => {
+  const checkPhoneWhatsApp = async (phone: string): Promise<boolean | null> => {
+    if (phone.replace(/[^\d]/g, "").length !== 10) return null;
+    const token = getAccessToken();
+    if (!token) return null;
+    setWhatsappChecking(true);
+    setWhatsappValid(null);
+    try {
+      const res = await checkWhatsAppNumber(phone, token);
+      const isValid = res.data?.isOnWhatsApp ?? false;
+      setWhatsappValid(isValid);
+      return isValid;
+    } catch {
+      setWhatsappValid(null);
+      return null;
+    } finally {
+      setWhatsappChecking(false);
+    }
+  };
+
+  const addManualCandidate = async () => {
     if (!currentManualName.trim()) { toast.error("Candidate name is required"); return; }
     if (currentManualPhone.replace(/[^\d]/g, "").length !== 10) { toast.error("Phone number must be exactly 10 digits"); return; }
     if (!currentManualRole.trim()) { toast.error("Role is required"); return; }
+
+    if (whatsappChecking) { toast.error("Checking WhatsApp status, please wait..."); return; }
+
+    // If not yet checked, run the check now before allowing add
+    let valid = whatsappValid;
+    if (valid === null) {
+      valid = await checkPhoneWhatsApp(currentManualPhone);
+    }
+
+    if (!valid) {
+      toast.error("Not found in WhatsApp");
+      return;
+    }
+
     setManualCandidates((prev) => [
       ...prev,
       { id: String(Date.now()), name: currentManualName.trim(), phoneNumber: currentManualPhone, role: currentManualRole },
@@ -375,6 +413,7 @@ export default function WorkflowPage() {
     setCurrentManualName("");
     setCurrentManualPhone("");
     setCurrentManualRole("");
+    setWhatsappValid(null);
   };
 
   const removeManualCandidate = (id: string) => {
@@ -392,6 +431,29 @@ export default function WorkflowPage() {
     setRequestStep(2);
   };
 
+  const checkCsvWhatsAppNumbers = async (candidates: { name: string; phoneNumber: string; role?: string }[]) => {
+    const token = getAccessToken();
+    if (!token) return;
+
+    const phones = [...new Set(candidates.map((c) => c.phoneNumber))];
+
+    // Mark all as checking
+    setCsvWhatsAppStatus(phones.reduce<Record<string, "checking">>((acc, p) => { acc[p] = "checking"; return acc; }, {}));
+
+    // Run all checks in parallel
+    await Promise.all(
+      phones.map(async (phone) => {
+        try {
+          const res = await checkWhatsAppNumber(phone, token);
+          const isValid = res.data?.isOnWhatsApp ?? false;
+          setCsvWhatsAppStatus((prev) => ({ ...prev, [phone]: isValid }));
+        } catch {
+          setCsvWhatsAppStatus((prev) => ({ ...prev, [phone]: false }));
+        }
+      }),
+    );
+  };
+
   const parseCsv = async (file: File) => {
     const text = await file.text();
     const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -401,6 +463,8 @@ export default function WorkflowPage() {
       return { name, phoneNumber, role };
     }).filter((candidate) => candidate.name && candidate.phoneNumber);
     setCsvCandidates(candidates);
+    setCsvWhatsAppStatus({});
+    void checkCsvWhatsAppNumbers(candidates);
   };
 
   const sendRequest = async () => {
@@ -413,7 +477,9 @@ export default function WorkflowPage() {
           phoneNumber: `91${c.phoneNumber.replace(/[^\d]/g, "")}`,
           role: c.role,
         }))
-      : csvCandidates.map((c) => ({ name: c.name, phoneNumber: c.phoneNumber, role: requestRole }));
+      : csvCandidates
+          .filter((c) => csvWhatsAppStatus[c.phoneNumber] !== false)
+          .map((c) => ({ name: c.name, phoneNumber: c.phoneNumber, role: requestRole }));
 
     if (candidates.length === 0) {
       toast.error("Add at least one candidate");
@@ -899,7 +965,17 @@ export default function WorkflowPage() {
                 </p>
               ) : (
                 <div className="max-h-64 overflow-y-auto">
-                  {skills.map((skill) => (
+                  {[...skills].sort((a, b) => {
+                    const q = skillQuery.trim().toLowerCase();
+                    const rank = (name: string) => {
+                      const n = name.toLowerCase();
+                      if (n === q)            return 0;
+                      if (n.startsWith(q))   return 1;
+                      return 2;
+                    };
+                    const diff = rank(a.name) - rank(b.name);
+                    return diff !== 0 ? diff : a.name.localeCompare(b.name);
+                  }).map((skill) => (
                     <label
                       key={skill.skillId}
                       className="flex cursor-pointer items-center gap-3 border-b border-neutral-100 px-4 py-3 last:border-b-0 hover:bg-neutral-50"
@@ -1006,7 +1082,7 @@ export default function WorkflowPage() {
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-[13px]">Phone Number <span className="text-[#ff5723]">*</span></Label>
-                          <div className="flex overflow-hidden rounded-lg border">
+                          <div className={cn("flex overflow-hidden rounded-lg border", whatsappValid === false && "border-red-400", whatsappValid === true && "border-green-400")}>
                             <span className="grid w-12 shrink-0 place-items-center bg-neutral-100 text-[13px] text-[#7a7a7a]">+91</span>
                             <Input
                               className="rounded-none border-0"
@@ -1014,9 +1090,42 @@ export default function WorkflowPage() {
                               placeholder="6380099916"
                               maxLength={10}
                               inputMode="numeric"
-                              onChange={(e) => setCurrentManualPhone(e.target.value.replace(/[^\d]/g, "").slice(0, 10))}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/[^\d]/g, "").slice(0, 10);
+                                setCurrentManualPhone(val);
+                                setWhatsappValid(null);
+                              }}
+                              onBlur={() => void checkPhoneWhatsApp(currentManualPhone)}
                             />
+                            {whatsappChecking && (
+                              <span className="grid w-9 shrink-0 place-items-center">
+                                <svg className="h-4 w-4 animate-spin text-neutral-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                </svg>
+                              </span>
+                            )}
+                            {!whatsappChecking && whatsappValid === true && (
+                              <span className="grid w-9 shrink-0 place-items-center text-green-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z" clipRule="evenodd" />
+                                </svg>
+                              </span>
+                            )}
+                            {!whatsappChecking && whatsappValid === false && (
+                              <span className="grid w-9 shrink-0 place-items-center text-red-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              </span>
+                            )}
                           </div>
+                          {whatsappValid === false && (
+                            <p className="text-[11px] text-red-500">Not found in WhatsApp</p>
+                          )}
+                          {whatsappValid === true && (
+                            <p className="text-[11px] text-green-600">WhatsApp verified ✓</p>
+                          )}
                         </div>
                       </div>
                       <div className="space-y-1.5">
@@ -1031,16 +1140,17 @@ export default function WorkflowPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => { setCurrentManualName(""); setCurrentManualPhone(""); setCurrentManualRole(""); }}
+                          onClick={() => { setCurrentManualName(""); setCurrentManualPhone(""); setCurrentManualRole(""); setWhatsappValid(null); }}
                         >
                           Cancel
                         </Button>
                         <Button
                           size="sm"
                           className="bg-[#1a1a1a] text-white hover:bg-[#333]"
-                          onClick={addManualCandidate}
+                          disabled={whatsappChecking}
+                          onClick={() => void addManualCandidate()}
                         >
-                          Add
+                          {whatsappChecking ? "Checking..." : "Add"}
                         </Button>
                       </div>
                     </div>
@@ -1048,7 +1158,7 @@ export default function WorkflowPage() {
                     <button
                       type="button"
                       className="flex items-center gap-1.5 text-[13px] text-[#6a6a6a] hover:text-[#1f1f1f]"
-                      onClick={() => { setCurrentManualName(""); setCurrentManualPhone(""); setCurrentManualRole(""); }}
+                      onClick={() => { setCurrentManualName(""); setCurrentManualPhone(""); setCurrentManualRole(""); setWhatsappValid(null); }}
                     >
                       <Plus className="h-4 w-4" />
                       Add another candidate
@@ -1111,16 +1221,46 @@ export default function WorkflowPage() {
                         <div className="overflow-hidden rounded-md border border-neutral-200">
                           <div className="grid grid-cols-2 border-b bg-neutral-50 px-4 py-3 text-[12px] font-medium text-[#6f7582]">
                             <span>Candidate Name</span>
-                            <span>Candidate Phone Number <span className="text-[#ff5723]">*</span></span>
+                            <span>Candidate Phone Number</span>
                           </div>
-                          {csvCandidates.slice(0, 5).map((candidate, index) => (
-                            <div key={`${candidate.phoneNumber}-${index}`} className="grid grid-cols-2 border-b px-4 py-4 text-[13px] last:border-b-0">
-                              <span className="font-medium text-[#1f1f1f]">{candidate.name}</span>
-                              <span className="text-[#4a4a4a]">{candidate.phoneNumber}</span>
-                            </div>
-                          ))}
+                          {csvCandidates.slice(0, 5).map((candidate, index) => {
+                            const wpStatus = csvWhatsAppStatus[candidate.phoneNumber];
+                            return (
+                              <div key={`${candidate.phoneNumber}-${index}`} className={cn("grid grid-cols-2 border-b px-4 py-3 text-[13px] last:border-b-0", wpStatus === false && "bg-red-50")}>
+                                <span className={cn("font-medium", wpStatus === false ? "text-[#9a9a9a] line-through" : "text-[#1f1f1f]")}>{candidate.name}</span>
+                                <div className="flex flex-col gap-0.5">
+                                  <span className={cn(wpStatus === false ? "text-[#9a9a9a]" : "text-[#4a4a4a]")}>{candidate.phoneNumber}</span>
+                                  {wpStatus === "checking" && (
+                                    <span className="flex items-center gap-1 text-[11px] text-neutral-400">
+                                      <svg className="h-3 w-3 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                      </svg>
+                                      Checking WhatsApp...
+                                    </span>
+                                  )}
+                                  {wpStatus === false && (
+                                    <span className="text-[11px] font-medium text-red-500">Not found in WhatsApp</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                        <p className="mt-3 text-[12px] text-[#7a7a7a]">&ldquo;0&rdquo; In-list Duplicates Removed</p>
+                        {(() => {
+                          const invalidCount = csvCandidates.filter((c) => csvWhatsAppStatus[c.phoneNumber] === false).length;
+                          const checkingCount = csvCandidates.filter((c) => csvWhatsAppStatus[c.phoneNumber] === "checking").length;
+                          return (
+                            <div className="mt-2 space-y-1">
+                              {checkingCount > 0 && (
+                                <p className="text-[12px] text-neutral-400">Verifying {checkingCount} number{checkingCount > 1 ? "s" : ""} on WhatsApp...</p>
+                              )}
+                              {invalidCount > 0 && checkingCount === 0 && (
+                                <p className="text-[12px] text-red-500">{invalidCount} number{invalidCount > 1 ? "s" : ""} not found on WhatsApp — will be skipped</p>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
 
@@ -1252,8 +1392,16 @@ export default function WorkflowPage() {
               {requestStep === 1 ? "Cancel" : "Back"}
             </Button>
             {requestStep === 1 ? (
-              <Button className="bg-[#ff5723] text-white hover:bg-[#f04d1d]" onClick={continueToRequestStep2}>
-                {requestTab === "bulk" && csvCandidates.length > 0 ? "Add Candidate" : "Continue"}
+              <Button
+                className="bg-[#ff5723] text-white hover:bg-[#f04d1d]"
+                disabled={requestTab === "bulk" && Object.values(csvWhatsAppStatus).some((s) => s === "checking")}
+                onClick={continueToRequestStep2}
+              >
+                {requestTab === "bulk" && Object.values(csvWhatsAppStatus).some((s) => s === "checking")
+                  ? "Verifying..."
+                  : requestTab === "bulk" && csvCandidates.length > 0
+                  ? "Add Candidate"
+                  : "Continue"}
               </Button>
             ) : (
               <Button className="bg-[#ff5723] text-white hover:bg-[#f04d1d]" disabled={sendingRequest} onClick={sendRequest}>
