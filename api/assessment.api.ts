@@ -199,6 +199,33 @@ export const getAssessmentOverview = (
     params: { orgId, ...(mode ? { mode } : {}) },
   });
 
+// ── Recent sessions ───────────────────────────────────────────────────────────
+
+export type RecentSession = {
+  candidateId:     string;
+  candidateName:   string;
+  candidateEmail:  string;
+  assessmentId:    string;
+  assessmentName:  string;
+  score:           number | null;
+  passed:          boolean | null;
+  proctoringScore: number | null;
+  aiFeedback:      string | null;
+  status:          string;
+  submittedAt:     string | null;
+};
+
+export const getRecentSessions = (
+  orgId:       string,
+  accessToken: string,
+  mode?:       "test" | "live",
+  limit        = 10,
+) =>
+  getRequest<{ sessions: RecentSession[] }>(apiPathConstants.assessments.recentSessions, {
+    accessToken,
+    params: { orgId, limit: String(limit), ...(mode ? { mode } : {}) },
+  });
+
 export const deleteAssessmentApi = (
 assessmentId: string, orgId: string, accessToken: string,
 ) =>

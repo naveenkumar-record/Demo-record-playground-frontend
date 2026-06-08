@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { getAssignmentDetail, type AssignmentItem, type CandidateRecord } from "@/api/assessmentAssignment.api";
 import { listAssessments } from "@/api/assessment.api";
 import { useOrg } from "@/components/layout/orgContext";
+import { useTestMode } from "@/components/layout/testModeContext";
 import PaginationControl from "@/components/ui/pagination-control";
 
 const PAGE_SIZE = 10;
@@ -49,7 +50,6 @@ function ResultBadge({ passed }: { passed?: boolean }) {
   );
 }
 
-// ── Status badge ──────────────────────────────────────────────────────────────
 const STATUS_STYLE: Record<CandidateRecord["status"], string> = {
   pending:   "bg-neutral-100 text-neutral-500",
   started:   "bg-amber-50 text-amber-600",
@@ -68,11 +68,12 @@ function StatusBadge({ status }: { status: CandidateRecord["status"] }) {
   );
 }
 
-
 export default function AssignmentDetailPage() {
   const params       = useParams();
   const assignmentId = params.assignmentId as string;
-  const { activeOrg } = useOrg();
+  const { activeOrg }  = useOrg();
+  const { isTestMode } = useTestMode();
+  const mode = isTestMode ? "test" : "live";
 
   const [assignment,      setAssignment]      = useState<AssignmentItem | null>(null);
   const [assessmentName,  setAssessmentName]  = useState("");
@@ -85,8 +86,8 @@ export default function AssignmentDetailPage() {
     const token = getAccessToken();
 
     Promise.all([
-      getAssignmentDetail(assignmentId, activeOrg.orgId, token),
-      listAssessments(activeOrg.orgId, 1, 100, "test", token),
+      getAssignmentDetail(assignmentId, activeOrg.orgId, token, mode),
+      listAssessments(activeOrg.orgId, 1, 100, mode, token),
     ]).then(([assignRes, assessRes]) => {
       const found = assignRes.data?.assignment ?? null;
       setAssignment(found);
@@ -102,9 +103,8 @@ export default function AssignmentDetailPage() {
     }).finally(() => {
       setLoading(false);
     });
-  }, [activeOrg?.orgId, assignmentId]);
+  }, [activeOrg?.orgId, assignmentId, mode]);
 
-  // ── All hooks must run before early returns ───────────────────────────────
   const candidates     = assignment?.candidates ?? [];
   const totalPages     = Math.max(1, Math.ceil(candidates.length / PAGE_SIZE));
   const paginated      = useMemo(
@@ -229,10 +229,9 @@ export default function AssignmentDetailPage() {
             )}
           </TableBody>
         </Table>
-
       </div>
 
-      {/* Pagination — outside the table */}
+      {/* Pagination */}
       <div className="mt-4 flex items-center justify-end">
         <PaginationControl
           currentPage={currentPage}
