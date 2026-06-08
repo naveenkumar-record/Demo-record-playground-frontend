@@ -40,6 +40,7 @@ type Props = {
   onSuccess: () => void;
   getToken: () => string;
   orgId: string;
+  mode: "test" | "live";
 };
 
 // ── CSV parser ────────────────────────────────────────────────────────────────
@@ -192,6 +193,7 @@ export default function AssignAssessmentModal({
   onSuccess,
   getToken,
   orgId,
+  mode,
 }: Props) {
   const [step, setStep] = useState<Step>("upload");
   const [saving, setSaving] = useState(false);
@@ -276,7 +278,7 @@ export default function AssignAssessmentModal({
     try {
       await createAssignment(
         assessmentId,
-        { orgId, batchName, tag, candidates: uniqueCandidates },
+        { orgId, mode, batchName, tag, candidates: uniqueCandidates },
         getToken(),
       );
       toast.success(

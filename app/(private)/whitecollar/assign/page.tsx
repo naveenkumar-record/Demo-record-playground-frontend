@@ -363,6 +363,7 @@ export default function AssignPage() {
         open={modalOpen}
         assessments={assessments}
         orgId={orgId ?? ""}
+        mode={mode}
         getToken={getAccessToken}
         onClose={() => setModalOpen(false)}
         onSuccess={fetchAssignments}

@@ -3,6 +3,52 @@ import apiPathConstants from "@/constants/api-path.constants";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+export type ViolationType = "FULLSCREEN_EXIT" | "TAB_SWITCH" | "LOOKING_AWAY" | "NO_FACE" | "MULTIPLE_FACES" | "EXTERNAL_OBJECT" | string;
+export type ViolationSeverity = "low" | "medium" | "high";
+
+export type Violation = {
+  type:            ViolationType;
+  severity:        ViolationSeverity;
+  timestamp:       string;
+  screenshotPath?: string;
+};
+
+export type Proctoring = {
+  proctoringScore:     number;
+  tabSwitchCount:      number;
+  fullscreenExitCount: number;
+  noFaceCount:         number;
+  multipleFaceCount:   number;
+  lookawayCount:       number;
+  externalObjectCount: number;
+  violations:          Violation[];
+};
+
+export type CandidateAnswer = {
+  questionId: string;
+  answer:     string;
+  timeSpent:  number;
+};
+
+export type CandidateSession = {
+  candidateId:           string;
+  assessmentStrId:       string;
+  candidate:             { name: string; email: string };
+  status:                string;
+  startTime?:            string;
+  endTime?:              string;
+  submittedAt?:          string;
+  score?:                number;
+  passed?:               boolean;
+  identityVerified?:     boolean;
+  aiFeedback?:           string;
+  proctoring?:           Proctoring;
+  answers?:              CandidateAnswer[];
+  recording?:            { status: string };
+  createdAt:             string;
+  updatedAt:             string;
+};
+
 export type CandidateRecord = {
   candidateId: string;
   name:        string;
@@ -47,6 +93,7 @@ export const createAssignment = (
   assessmentId: string,
   payload: {
     orgId:      string;
+    mode:       "test" | "live";
     batchName:  string;
     tag:        string;
     candidates: { name: string; email: string }[];
@@ -75,10 +122,21 @@ export const getAssignmentDetail = (
   assignmentId: string,
   orgId:        string,
   accessToken:  string,
+  mode?:        "test" | "live",
 ) =>
   getRequest<{ assignment: AssignmentItem }>(
     `${apiPathConstants.assessments.base}/assignments/${assignmentId}`,
-    { accessToken, params: { orgId } },
+    { accessToken, params: { orgId, ...(mode ? { mode } : {}) } },
+  );
+
+/** Fetch the full analytics session for a single candidate */
+export const getCandidateSession = (
+  candidateId: string,
+  accessToken: string,
+) =>
+  getRequest<{ session: CandidateSession }>(
+    `${apiPathConstants.assessments.base}/candidate-session/${candidateId}`,
+    { accessToken },
   );
 
 /** List assignment batches for an assessment */
@@ -86,8 +144,9 @@ export const listAssignments = (
   assessmentId: string,
   orgId:        string,
   accessToken:  string,
+  mode?:        "test" | "live",
 ) =>
   getRequest<{ assignments: AssignmentItem[]; total: number }>(
     `${apiPathConstants.assessments.base}/${assessmentId}/assignments`,
-    { accessToken, params: { orgId } },
+    { accessToken, params: { orgId, ...(mode ? { mode } : {}) } },
   );
