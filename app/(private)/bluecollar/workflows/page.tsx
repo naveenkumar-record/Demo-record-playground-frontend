@@ -1252,7 +1252,10 @@ export default function WorkflowPage() {
               {requestStep === 1 ? "Cancel" : "Back"}
             </Button>
             {requestStep === 1 ? (
-              <Button className="bg-[#ff5723] text-white hover:bg-[#f04d1d]" onClick={continueToRequestStep2}>
+              <Button
+                className="bg-[#ff5723] text-white hover:bg-[#f04d1d]"
+                onClick={continueToRequestStep2}
+              >
                 {requestTab === "bulk" && csvCandidates.length > 0 ? "Add Candidate" : "Continue"}
               </Button>
             ) : (

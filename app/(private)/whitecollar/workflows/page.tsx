@@ -10,6 +10,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useOrg } from "@/components/layout/orgContext";
 import { useProject } from "@/components/layout/projectContext";
@@ -128,6 +129,7 @@ export default function WorkflowsPage() {
   // Create modal
   const [createOpen, setCreateOpen] = useState(false);
   const [keyName, setKeyName] = useState("");
+  const [emailEnabled, setEmailEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   // Reveal modal (shown once after creation)
   const [revealOpen, setRevealOpen] = useState(false);
@@ -160,15 +162,17 @@ export default function WorkflowsPage() {
   // ── Create ─────────────────────────────────────────────────────────────────
   const handleCreate = async () => {
     if (!orgId) return;
-    if (!keyName.trim()) {
-      toast.message("Key name is required");
-      return;
-    }
+    if (!keyName.trim()) { toast.message("Key name is required"); return; }
     setSaving(true);
     try {
       const res = await createApiKey(
         orgId,
-        { name: keyName.trim(), mode, projectId },
+        {
+          name: keyName.trim(),
+          mode,
+          projectId,
+          emailNotificationsEnabled: emailEnabled,
+        },
         getAccessToken(),
       );
       const created = res.data;
@@ -177,6 +181,7 @@ export default function WorkflowsPage() {
         setRevealedKey(created);
         setCreateOpen(false);
         setKeyName("");
+        setEmailEnabled(false);
         setRevealOpen(true);
       }
     } catch (err: unknown) {
@@ -218,6 +223,7 @@ export default function WorkflowsPage() {
             className="h-10 gap-2 bg-[#ff5723] px-5 text-[13px] font-semibold text-white hover:bg-[#f04d1d]"
             onClick={() => {
               setKeyName("");
+              setEmailEnabled(false);
               setCreateOpen(true);
             }}
           >
@@ -259,6 +265,8 @@ export default function WorkflowsPage() {
                         className="mt-1 h-9 gap-2 bg-[#ff5723] px-4 text-[13px] font-semibold text-white hover:bg-[#f04d1d]"
                         onClick={() => {
                           setKeyName("");
+                          setEmailEnabled(false);
+                          setNotificationEmail("");
                           setCreateOpen(true);
                         }}
                       >
@@ -355,7 +363,7 @@ export default function WorkflowsPage() {
             </p>
           </DialogHeader>
 
-          <div className="space-y-4 px-5 py-1">
+          <div className="space-y-4 px-5 py-4">
             <div className="space-y-2">
               <Label className="text-sm text-[#6a6a6a]">Key Name</Label>
               <Input
@@ -368,6 +376,17 @@ export default function WorkflowsPage() {
                 }}
               />
             </div>
+
+            {/* Email Notifications toggle */}
+            <div className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-3">
+              <p className="text-[13px] font-semibold text-[#1a1a1a]">Email Notifications</p>
+              <Switch
+                checked={emailEnabled}
+                onCheckedChange={setEmailEnabled}
+                disabled={saving}
+              />
+            </div>
+
             <div className="flex items-center gap-2 rounded-md bg-neutral-50 px-3 py-2 text-sm text-[#6a6a6a]">
               <span className="font-medium">Mode:</span>
               <Badge
