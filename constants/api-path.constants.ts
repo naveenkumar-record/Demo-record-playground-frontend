@@ -66,4 +66,5 @@ const apiPathConstants = {
   },
 } as const;
 
+
 export default apiPathConstants;
