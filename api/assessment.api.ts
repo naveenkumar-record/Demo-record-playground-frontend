@@ -233,3 +233,46 @@ deleteRequest(
 apiPathConstants.assessments.delete(assessmentId),
 { accessToken, params: { orgId } },
 );
+
+// ── Smart AI assessments (API Requests page) ──────────────────────────────────
+
+export type SmartAiAssessmentItem = {
+  assessmentId: string;
+  jobTitle:     string;
+  type:         string;
+  status:       string;
+  createdAt:    string;
+  totalUsers:   number;
+};
+
+export type SmartAiCandidateSession = {
+  candidateId:  string;
+  name:         string;
+  email:        string;
+  status:       string;
+  passed:       boolean | null;
+  score:        number | null;
+  assignedAt:   string | null;
+  submittedAt:  string | null;
+};
+
+export const listSmartAiAssessments = (
+  orgId:       string,
+  accessToken: string,
+  mode?:       "test" | "live",
+) =>
+  getRequest<{ assessments: SmartAiAssessmentItem[] }>(apiPathConstants.assessments.smartAi, {
+    accessToken,
+    params: { orgId, ...(mode ? { mode } : {}) },
+  });
+
+export const getSmartAiSessions = (
+  assessmentId: string,
+  orgId:        string,
+  accessToken:  string,
+  mode?:        "test" | "live",
+) =>
+  getRequest<{ sessions: SmartAiCandidateSession[] }>(
+    apiPathConstants.assessments.smartAiSessions(assessmentId),
+    { accessToken, params: { orgId, ...(mode ? { mode } : {}) } },
+  );

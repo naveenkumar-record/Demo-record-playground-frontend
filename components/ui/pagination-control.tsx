@@ -49,7 +49,7 @@ const PaginationControl: React.FC<PaginationProps> = ({
             onClick={() => onPageChange(page)}
             className={
               currentPage === page
-                ? "h-9 w-9 bg-[#1a3a2a] text-white hover:bg-[#142e22]"
+                ? "h-9 w-9 bg-[#1f1f1f] text-white hover:bg-[#3a3a3a]"
                 : "h-9 w-9 border border-neutral-200 bg-white text-[#3a3a3a] hover:bg-neutral-50"
             }
             variant={currentPage === page ? "default" : "outline"}
