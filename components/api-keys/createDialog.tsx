@@ -66,7 +66,6 @@ export function CreateDialog({ open, onClose, onCreated, mode }: Props) {
           name: name.trim(),
           mode,
           projectId: activeProject?.projectId ?? "",
-          notificationEmail: emailEnabled ? notificationEmail.trim() : "",
           emailNotificationsEnabled: emailEnabled,
         },
         token,
