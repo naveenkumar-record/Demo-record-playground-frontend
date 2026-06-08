@@ -266,7 +266,6 @@ export default function WorkflowsPage() {
                         onClick={() => {
                           setKeyName("");
                           setEmailEnabled(false);
-                          setNotificationEmail("");
                           setCreateOpen(true);
                         }}
                       >
@@ -334,8 +333,7 @@ export default function WorkflowsPage() {
         </div>
         {/* ── Footer: count + pagination ───────────────────────────────────── */}
         {!loading && keys.length > 0 && (
-          <div className="flex items-center justify-end  px-1 pt-1">
-            
+          <div className="flex items-center justify-end px-1 pt-1">
             <PaginationControl
               currentPage={page}
               totalPages={totalPages}
