@@ -186,7 +186,7 @@ export default function AssignPage() {
   const { isTestMode }    = useTestMode();
 
   const orgId     = activeOrg?.orgId;
-  const projectId = activeProject?.projectId ?? undefined;
+  const projectId = activeProject?.projectId ?? "";
   const mode      = isTestMode ? "test" : "live";
 
   const [assignments,  setAssignments]  = useState<AssignmentItem[]>([]);
@@ -202,7 +202,7 @@ export default function AssignPage() {
     if (!orgId) return;
     setLoading(true);
     try {
-      const res = await listOrgAssignments(orgId, getAccessToken(), mode as "test" | "live");
+      const res = await listOrgAssignments(orgId, getAccessToken(), mode as "test" | "live", projectId ?? "");
       setAssignments(res.data?.assignments ?? []);
       setPage(1);
     } catch {
@@ -210,7 +210,7 @@ export default function AssignPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, mode]);
+  }, [orgId, mode, projectId]);
 
   // ── Fetch assessments (for modal dropdown) ──────────────────────────────────
 

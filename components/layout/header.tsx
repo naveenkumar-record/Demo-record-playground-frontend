@@ -172,8 +172,8 @@ export default function Header({ userInitial, email }: HeaderProps) {
         {/* RIGHT */}
         <div className="flex items-center gap-2">
 
-          {/* ── Project Switcher ── */}
-          {activeOrg?.orgId && (
+          {/* ── Project Switcher — hidden on settings pages ── */}
+          {activeOrg?.orgId && !pathname.startsWith("/settings") && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 gap-1.5 text-sm">

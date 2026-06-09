@@ -111,10 +111,19 @@ export const listOrgAssignments = (
   orgId:       string,
   accessToken: string,
   mode?:       "test" | "live",
+  projectId?:  string,
 ) =>
   getRequest<{ assignments: AssignmentItem[]; total: number }>(
     `${apiPathConstants.assessments.base}/assignments`,
-    { accessToken, params: { orgId, ...(mode ? { mode } : {}) } },
+    {
+      accessToken,
+      params: {
+        orgId,
+        ...(mode      ? { mode }      : {}),
+        // Always send projectId so backend can filter (empty string = Default project)
+        projectId: projectId ?? "",
+      },
+    },
   );
 
 /** Get a single assignment detail with pass/fail enrichment */

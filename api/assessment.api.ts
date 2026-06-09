@@ -111,7 +111,8 @@ getRequest<AssessmentListResponse>(apiPathConstants.assessments.base, {
 accessToken, signal,
 params: {
 orgId, page: String(page), limit: String(limit), mode,
-...(projectId ? { projectId } : {}),
+// Always send projectId — empty string = Default project, undefined = no filter
+...(projectId !== undefined ? { projectId } : {}),
 },
 });
  
@@ -198,11 +199,16 @@ export type AssessmentOverview = {
 };
 
 export const getAssessmentOverview = (
-  orgId: string, accessToken: string, mode?: "test" | "live",
+  orgId: string, accessToken: string, mode?: "test" | "live", projectId?: string,
 ) =>
   getRequest<{ overview: AssessmentOverview }>(apiPathConstants.assessments.overview, {
     accessToken,
-    params: { orgId, ...(mode ? { mode } : {}) },
+    params: {
+      orgId,
+      ...(mode      ? { mode }      : {}),
+      // Always send projectId — empty string means "Default project only"
+      projectId: projectId ?? "",
+    },
   });
 
 // ── Recent sessions ───────────────────────────────────────────────────────────

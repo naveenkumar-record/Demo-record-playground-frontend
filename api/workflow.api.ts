@@ -77,7 +77,7 @@ export const listWorkflows = (
       page: String(page),
       limit: String(limit),
       mode,
-      ...(projectId ? { projectId } : {}),
+      ...(projectId !== undefined ? { projectId } : {}),
     },
   });
 
