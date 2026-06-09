@@ -56,13 +56,16 @@ const apiPathConstants = {
     logs: "/bluecollar/logs",
   },
   assessments: {
-    base:        "/assessments",
-    overview:    "/assessments/overview",
-    byId:        (id: string)                => `/assessments/${id}`,
-    toggle:      (id: string)                => `/assessments/${id}/toggle`,
-    delete:      (id: string)                => `/assessments/${id}`,
-    questions:   (id: string)                => `/assessments/${id}/questions`,
-    questionById:(id: string, qid: string)   => `/assessments/${id}/questions/${qid}`,
+    base:            "/assessments",
+    overview:        "/assessments/overview",
+    recentSessions:  "/assessments/recent-sessions",
+    smartAi:         "/assessments/smart-ai",
+    smartAiSessions: (id: string) => `/assessments/smart-ai/${id}/sessions`,
+    byId:            (id: string)              => `/assessments/${id}`,
+    toggle:          (id: string)              => `/assessments/${id}/toggle`,
+    delete:          (id: string)              => `/assessments/${id}`,
+    questions:       (id: string)              => `/assessments/${id}/questions`,
+    questionById:    (id: string, qid: string) => `/assessments/${id}/questions/${qid}`,
   },
 } as const;
 

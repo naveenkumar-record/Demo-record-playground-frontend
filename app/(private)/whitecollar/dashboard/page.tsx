@@ -356,6 +356,7 @@ export default function WhitecollarDashboardPage() {
               </div>
             </div>
           </div>
+
         </>
       ) : null}
     </div>

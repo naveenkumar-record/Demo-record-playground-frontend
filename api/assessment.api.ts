@@ -205,6 +205,33 @@ export const getAssessmentOverview = (
     params: { orgId, ...(mode ? { mode } : {}) },
   });
 
+// ── Recent sessions ───────────────────────────────────────────────────────────
+
+export type RecentSession = {
+  candidateId:     string;
+  candidateName:   string;
+  candidateEmail:  string;
+  assessmentId:    string;
+  assessmentName:  string;
+  score:           number | null;
+  passed:          boolean | null;
+  proctoringScore: number | null;
+  aiFeedback:      string | null;
+  status:          string;
+  submittedAt:     string | null;
+};
+
+export const getRecentSessions = (
+  orgId:       string,
+  accessToken: string,
+  mode?:       "test" | "live",
+  limit        = 10,
+) =>
+  getRequest<{ sessions: RecentSession[] }>(apiPathConstants.assessments.recentSessions, {
+    accessToken,
+    params: { orgId, limit: String(limit), ...(mode ? { mode } : {}) },
+  });
+
 export const deleteAssessmentApi = (
 assessmentId: string, orgId: string, accessToken: string,
 ) =>
@@ -212,3 +239,46 @@ deleteRequest(
 apiPathConstants.assessments.delete(assessmentId),
 { accessToken, params: { orgId } },
 );
+
+// ── Smart AI assessments (API Requests page) ──────────────────────────────────
+
+export type SmartAiAssessmentItem = {
+  assessmentId: string;
+  jobTitle:     string;
+  type:         string;
+  status:       string;
+  createdAt:    string;
+  totalUsers:   number;
+};
+
+export type SmartAiCandidateSession = {
+  candidateId:  string;
+  name:         string;
+  email:        string;
+  status:       string;
+  passed:       boolean | null;
+  score:        number | null;
+  assignedAt:   string | null;
+  submittedAt:  string | null;
+};
+
+export const listSmartAiAssessments = (
+  orgId:       string,
+  accessToken: string,
+  mode?:       "test" | "live",
+) =>
+  getRequest<{ assessments: SmartAiAssessmentItem[] }>(apiPathConstants.assessments.smartAi, {
+    accessToken,
+    params: { orgId, ...(mode ? { mode } : {}) },
+  });
+
+export const getSmartAiSessions = (
+  assessmentId: string,
+  orgId:        string,
+  accessToken:  string,
+  mode?:        "test" | "live",
+) =>
+  getRequest<{ sessions: SmartAiCandidateSession[] }>(
+    apiPathConstants.assessments.smartAiSessions(assessmentId),
+    { accessToken, params: { orgId, ...(mode ? { mode } : {}) } },
+  );
