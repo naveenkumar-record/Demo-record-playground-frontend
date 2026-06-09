@@ -12,6 +12,7 @@ import {
   type VideoItem,
   type QuestionSummaryItem,
 } from "@/api/bluecollar.api";
+import { useTestMode } from "@/components/layout/testModeContext";
 import { getAccessToken } from "@/lib/auth-client";
 import { toast } from "sonner";
 
@@ -161,6 +162,8 @@ export default function CandidateDetailPage() {
   const router = useRouter();
   const params = useParams<{ candidateId: string }>();
   const candidateId = params.candidateId;
+  const { isTestMode } = useTestMode();
+  const mode = isTestMode ? "test" : "live";
 
   const [detail,        setDetail]        = useState<RequestDetail | null>(null);
   const [loading,       setLoading]       = useState(true);
@@ -173,7 +176,7 @@ export default function CandidateDetailPage() {
     if (!token) return;
     setResending(true);
     try {
-      await resendLog(candidateId, token);
+      await resendLog(candidateId, mode, token);
       toast.success("WhatsApp message resent successfully");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to resend");
@@ -190,7 +193,7 @@ export default function CandidateDetailPage() {
     const controller = new AbortController();
     setLoading(true);
 
-    getRequestDetail(candidateId, token, controller.signal)
+    getRequestDetail(candidateId, mode, token, controller.signal)
       .then((res) => {
         if (res.data) setDetail(res.data);
       })

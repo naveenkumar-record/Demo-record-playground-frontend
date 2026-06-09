@@ -28,6 +28,7 @@ import {
 } from "@/api/bluecollar.api";
 import { listWorkflows, type WorkflowItem } from "@/api/workflow.api";
 import { useOrg } from "@/components/layout/orgContext";
+import { useTestMode } from "@/components/layout/testModeContext";
 import { getAccessToken } from "@/lib/auth-client";
 import { toast } from "sonner";
 
@@ -258,7 +259,7 @@ function WorkflowFilterDropdown({
 
 // ── resend button ──────────────────────────────────────────────────────────────
 
-function ResendButton({ candidateId, onDone }: { candidateId: string; onDone: () => void }) {
+function ResendButton({ candidateId, mode, onDone }: { candidateId: string; mode: "live" | "test"; onDone: () => void }) {
   const [loading, setLoading] = useState(false);
 
   const handleResend = async (e: React.MouseEvent) => {
@@ -268,7 +269,7 @@ function ResendButton({ candidateId, onDone }: { candidateId: string; onDone: ()
 
     setLoading(true);
     try {
-      await resendLog(candidateId, token);
+      await resendLog(candidateId, mode, token);
       toast.success("WhatsApp message resent successfully");
       onDone();
     } catch (err: unknown) {
@@ -305,6 +306,8 @@ const WHATSAPP_STATUS_OPTIONS = [
 
 export default function LogsPage() {
   const { activeOrg } = useOrg();
+  const { isTestMode } = useTestMode();
+  const mode = isTestMode ? "test" : "live";
 
   const [logs, setLogs]           = useState<LogItem[]>([]);
   const [total, setTotal]         = useState(0);
@@ -324,10 +327,10 @@ export default function LogsPage() {
     if (!activeOrg?.orgId) return;
     const token = getAccessToken();
     if (!token) return;
-    listWorkflows(activeOrg.orgId, 1, 100, "live", token)
+    listWorkflows(activeOrg.orgId, 1, 100, mode, token)
       .then((res) => setWorkflows(res.data?.workflows ?? []))
       .catch(() => undefined);
-  }, [activeOrg?.orgId]);
+  }, [activeOrg?.orgId, mode]);
 
   const loadLogs = useCallback(() => {
     if (!activeOrg?.orgId) return;
@@ -338,11 +341,11 @@ export default function LogsPage() {
     if (filterWorkflow) filters.workflowId     = filterWorkflow;
     if (filterStatus)   filters.whatsappStatus = filterStatus;
 
-    const key = `${activeOrg.orgId}|${page}|${filterWorkflow}|${filterStatus}`;
+    const key = `${activeOrg.orgId}|${mode}|${page}|${filterWorkflow}|${filterStatus}`;
     fetchKeyRef.current = key;
     setLoading(true);
 
-    listLogs(activeOrg.orgId, page, PAGE_LIMIT, token, filters)
+    listLogs(activeOrg.orgId, page, PAGE_LIMIT, mode, token, filters)
       .then((res) => {
         if (fetchKeyRef.current !== key) return;
         if (res.data) {
@@ -357,7 +360,7 @@ export default function LogsPage() {
       .finally(() => {
         if (fetchKeyRef.current === key) setLoading(false);
       });
-  }, [activeOrg?.orgId, page, filterWorkflow, filterStatus]);
+  }, [activeOrg?.orgId, mode, page, filterWorkflow, filterStatus]);
 
   useEffect(() => { loadLogs(); }, [loadLogs]);
 
@@ -523,7 +526,7 @@ export default function LogsPage() {
 
                   {/* Resend */}
                   <TableCell className="pr-5 text-right">
-                    <ResendButton candidateId={log.candidateId} onDone={loadLogs} />
+                    <ResendButton candidateId={log.candidateId} mode={mode} onDone={loadLogs} />
                   </TableCell>
                 </TableRow>
               ))
