@@ -94,7 +94,10 @@ roleType?: string;
 experienceRange?: string;
 skills?: string[];
 questionSetType?: string;
-// totalMarks, passMarks, duration, difficulty are fixed by the server (100 / 60 / 75 / Medium)
+totalMarks?: number;
+passMarks?: number;
+duration?: number;
+difficulty?: string;
 };
  
 // ── API functions ─────────────────────────────────────────────────────────────
@@ -135,7 +138,10 @@ export type UpdateAssessmentPayload = {
   experienceRange?: string;
   skills?:          string[];
   questionSetType?: string;
-  // totalMarks, passMarks, duration, difficulty are fixed by the server — not sent
+  totalMarks?:      number;
+  passMarks?:       number;
+  duration?:        number;
+  difficulty?:      string;
   // Builder content
   sections?:        AssessmentSection[];
   codingProblems?:  CodingProblem[];

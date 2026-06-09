@@ -899,17 +899,7 @@ export default function WorkflowPage() {
                 </p>
               ) : (
                 <div className="max-h-64 overflow-y-auto">
-                  {[...skills].sort((a, b) => {
-                    const q = skillQuery.trim().toLowerCase();
-                    const rank = (name: string) => {
-                      const n = name.toLowerCase();
-                      if (n === q)            return 0;
-                      if (n.startsWith(q))   return 1;
-                      return 2;
-                    };
-                    const diff = rank(a.name) - rank(b.name);
-                    return diff !== 0 ? diff : a.name.localeCompare(b.name);
-                  }).map((skill) => (
+                  {skills.map((skill) => (
                     <label
                       key={skill.skillId}
                       className="flex cursor-pointer items-center gap-3 border-b border-neutral-100 px-4 py-3 last:border-b-0 hover:bg-neutral-50"

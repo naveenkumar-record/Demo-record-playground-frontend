@@ -38,8 +38,8 @@ export function AuthShell({ children }: AuthShellProps) {
   return (
     <div className="flex min-h-screen flex-col bg-white px-4 pb-5 pt-4 sm:px-5 sm:pb-7 sm:pt-[18px]">
       <Link href="/login" className="inline-flex cursor-pointer items-center gap-[9px] text-[11px] leading-none font-medium text-[#303030] sm:text-[12px]">
-        <Image src="/logo.png" alt="Record Platform" width={24} height={24} />
-        <span className="text-[14px] sm:text-[16px]">Record Platform</span>
+        <Image src="/logo.png" alt="Record Studio" width={24} height={24} />
+        <span className="text-[14px] sm:text-[16px]">Record Studio</span>
       </Link>
 
       <div className="grid flex-1 place-items-center px-0 py-4 pb-2 sm:py-[18px]">
@@ -64,7 +64,7 @@ export function AuthCard({
     <section className="w-full max-w-[380px] px-0.5 text-center sm:px-0">
       {showBrandLogo ? (
         <div className="mb-3 grid place-items-center sm:mb-[14px]">
-          <Image src="/logo.png" alt="Record Platform" width={44} height={44} />
+          <Image src="/logo.png" alt="Record Studio" width={44} height={44} />
         </div>
       ) : null}
 
