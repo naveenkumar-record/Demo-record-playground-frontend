@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useOrg }      from "@/components/layout/orgContext";
 import { useTestMode } from "@/components/layout/testModeContext";
+import { useProject }  from "@/components/layout/projectContext";
 import {
   getAssessmentOverview,
   type AssessmentOverview,
@@ -203,10 +204,13 @@ function EmptyState() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function WhitecollarDashboardPage() {
-  const { activeOrg }  = useOrg();
-  const { isTestMode } = useTestMode();
-  const orgId = activeOrg?.orgId ?? "";
-  const mode  = isTestMode ? "test" : "live" as "test" | "live";
+  const { activeOrg }     = useOrg();
+  const { isTestMode }    = useTestMode();
+  const { activeProject } = useProject();
+  const orgId     = activeOrg?.orgId ?? "";
+  const mode      = isTestMode ? "test" : "live" as "test" | "live";
+  // activeProject === null means "Default" (projectId = "")
+  const projectId = activeProject?.projectId ?? "";
 
   const [overview, setOverview] = useState<AssessmentOverview | null>(null);
   const [loading,  setLoading]  = useState(true);
@@ -215,14 +219,14 @@ export default function WhitecollarDashboardPage() {
     if (!orgId) return;
     setLoading(true);
     try {
-      const res = await getAssessmentOverview(orgId, getToken(), mode);
+      const res = await getAssessmentOverview(orgId, getToken(), mode, projectId);
       if (res.data?.overview) setOverview(res.data.overview);
     } catch {
       toast.error("Failed to load overview");
     } finally {
       setLoading(false);
     }
-  }, [orgId, mode]);
+  }, [orgId, mode, projectId]);
 
   useEffect(() => { fetchOverview(); }, [fetchOverview]);
 

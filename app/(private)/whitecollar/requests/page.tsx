@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useOrg }      from "@/components/layout/orgContext";
+import { useProject }  from "@/components/layout/projectContext";
 import { useTestMode } from "@/components/layout/testModeContext";
 import {
   listSmartAiAssessments,
@@ -92,10 +93,14 @@ function SkeletonRows({ cols }: { cols: number }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function WhitecollarRequestsPage() {
-  const { activeOrg }  = useOrg();
-  const { isTestMode } = useTestMode();
-  const orgId = activeOrg?.orgId ?? "";
-  const mode  = isTestMode ? "test" : "live" as "test" | "live";
+  const { activeOrg }     = useOrg();
+  const { activeProject } = useProject();
+  const { isTestMode }    = useTestMode();
+  const orgId     = activeOrg?.orgId ?? "";
+  const mode      = isTestMode ? "test" : "live" as "test" | "live";
+  // Smart AI assessments have no projectId — only show them under Default project (projectId = "")
+  const projectId = activeProject?.projectId ?? "";
+  const isDefaultProject = projectId === "";
 
   // ── Assessment list state ─────────────────────────────────────────────────
   const [assessments, setAssessments] = useState<SmartAiAssessmentItem[]>([]);
@@ -109,6 +114,12 @@ export default function WhitecollarRequestsPage() {
   // ── Fetch list ─────────────────────────────────────────────────────────────
   const fetchAssessments = useCallback(async () => {
     if (!orgId) return;
+    // Smart AI has no projectId — only fetch when Default project is selected
+    if (!isDefaultProject) {
+      setAssessments([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const res = await listSmartAiAssessments(orgId, getToken(), mode);
@@ -118,7 +129,10 @@ export default function WhitecollarRequestsPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, mode]);
+  }, [orgId, mode, isDefaultProject]);
+
+  // Reset detail view whenever org / mode / project changes
+  useEffect(() => { setSelected(null); setSessions([]); }, [orgId, mode, isDefaultProject]);
 
   useEffect(() => { fetchAssessments(); }, [fetchAssessments]);
 
@@ -249,7 +263,9 @@ export default function WhitecollarRequestsPage() {
             ) : assessments.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-16 text-center text-[13px] text-neutral-400">
-                  No Smart AI assessments yet.
+                  {isDefaultProject
+                    ? "No Smart AI assessments yet."
+                    : "Smart AI assessments are only available in the Default project."}
                 </td>
               </tr>
             ) : (
