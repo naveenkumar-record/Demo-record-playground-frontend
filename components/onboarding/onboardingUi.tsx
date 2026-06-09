@@ -31,8 +31,8 @@ export function OnboardingShell({ email, children }: { email?: string; children:
     <div className="flex min-h-screen flex-col bg-white">
       <header className="flex h-[52px] items-center justify-between border-b border-[#e7e7e7] bg-white px-3 sm:px-[18px]">
         <Link href="/login" className="inline-flex cursor-pointer items-center gap-[7px] text-[11px] font-medium text-[#323232] sm:text-[12px]">
-          <Image src="/logo.png" alt="Record Platform" width={29} height={29} />
-          <span className="text-[14px] sm:text-[16px]">Record Platform</span>
+          <Image src="/logo.png" alt="Record Studio" width={29} height={29} />
+          <span className="text-[14px] sm:text-[16px]">Record Studio</span>
         </Link>
         <ProfileMenu email={identity.email} letter={identity.letter} />
       </header>
