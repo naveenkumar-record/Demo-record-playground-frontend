@@ -120,7 +120,7 @@ export default function WorkflowsPage() {
   const { activeProject } = useProject();
   const { isTestMode } = useTestMode();
   const orgId = activeOrg?.orgId;
-  const projectId = activeProject?.projectId ?? undefined;
+  const projectId = activeProject?.projectId ?? "";
   const mode = isTestMode ? "test" : "live";
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(false);

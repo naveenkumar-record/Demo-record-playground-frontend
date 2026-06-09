@@ -23,7 +23,7 @@ export const listApiKeys = (
   getRequest<ApiKey[]>(apiPathConstants.apiKeys.base, {
     accessToken,
     signal,
-    params: { orgId, ...(projectId ? { projectId } : {}), ...(mode ? { mode } : {}) },
+    params: { orgId, ...(projectId !== undefined ? { projectId } : {}), ...(mode ? { mode } : {}) },
   });
 
 export const createApiKey = (

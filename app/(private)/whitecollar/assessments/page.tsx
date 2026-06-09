@@ -118,7 +118,7 @@ export default function AssessmentsPage() {
   const { isTestMode } = useTestMode();
 
   const orgId = activeOrg?.orgId;
-  const projectId = activeProject?.projectId ?? undefined;
+  const projectId = activeProject?.projectId ?? "";
   const mode      = (isTestMode ? "test" : "live") as "test" | "live";
 
   // ── Data state ──────────────────────────────────────────────────────────────
