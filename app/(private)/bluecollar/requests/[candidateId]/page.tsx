@@ -12,6 +12,7 @@ import {
   type VideoItem,
   type QuestionSummaryItem,
 } from "@/api/bluecollar.api";
+import { useTestMode } from "@/components/layout/testModeContext";
 import { getAccessToken } from "@/lib/auth-client";
 import { toast } from "sonner";
 
@@ -161,10 +162,13 @@ export default function CandidateDetailPage() {
   const router = useRouter();
   const params = useParams<{ candidateId: string }>();
   const candidateId = params.candidateId;
+  const { isTestMode } = useTestMode();
+  const mode = isTestMode ? "test" : "live";
 
-  const [detail,        setDetail]        = useState<RequestDetail | null>(null);
-  const [loading,       setLoading]       = useState(true);
-  const [resending,     setResending]     = useState(false);
+  const [detail,         setDetail]         = useState<RequestDetail | null>(null);
+  const [loading,        setLoading]        = useState(true);
+  const [notFound,       setNotFound]       = useState(false);
+  const [resending,      setResending]      = useState(false);
   const [selectedQIndex, setSelectedQIndex] = useState(0);
 
   const handleResend = async () => {
@@ -173,7 +177,7 @@ export default function CandidateDetailPage() {
     if (!token) return;
     setResending(true);
     try {
-      await resendLog(candidateId, token);
+      await resendLog(candidateId, mode, token);
       toast.success("WhatsApp message resent successfully");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to resend");
@@ -189,31 +193,51 @@ export default function CandidateDetailPage() {
 
     const controller = new AbortController();
     setLoading(true);
+    setNotFound(false);
+    setDetail(null);
 
-    getRequestDetail(candidateId, token, controller.signal)
+    getRequestDetail(candidateId, mode, token, controller.signal)
       .then((res) => {
-        if (res.data) setDetail(res.data);
+        if (res.data) {
+          setDetail(res.data);
+        } else {
+          setNotFound(true);
+        }
       })
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        toast.error(err instanceof Error ? err.message : "Failed to load candidate");
+        const msg = err instanceof Error ? err.message : "";
+        if (msg.toLowerCase().includes("not found") || msg.includes("404")) {
+          setNotFound(true);
+        } else {
+          toast.error(msg || "Failed to load candidate");
+          setNotFound(true);
+        }
       })
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [candidateId]);
+  }, [candidateId, mode]);
 
   if (loading) return <LoadingSkeleton />;
 
-  if (!detail) {
+  if (notFound || !detail) {
     return (
-      <div className="flex min-h-full items-center justify-center">
-        <div className="text-center">
-          <p className="text-[15px] text-[#4a4a4a]">Candidate not found.</p>
-          <Button variant="outline" className="mt-4" onClick={() => router.push("/bluecollar/requests")}>
-            Back to Requests
-          </Button>
+      <div className="flex min-h-full flex-col items-center justify-center gap-4">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
+          <svg className="h-8 w-8 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+          </svg>
         </div>
+        <div className="text-center">
+          <p className="text-[16px] font-semibold text-[#1f1f1f]">Candidate not found</p>
+          <p className="mt-1 text-[13px] text-[#9a9a9a]">
+            This candidate doesn&apos;t exist or belongs to a different mode.
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => router.push("/bluecollar/requests")}>
+          Back to Requests
+        </Button>
       </div>
     );
   }
@@ -354,17 +378,34 @@ export default function CandidateDetailPage() {
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : detail.status === "completed" ? (
+                /* completed but result still being generated */
                 <div className="flex items-center gap-4 py-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orange-50">
+                    <svg className="h-5 w-5 animate-spin text-[#ff5723]" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-semibold text-[#1f1f1f]">Generating result…</p>
+                    <p className="text-[12px] text-[#9a9a9a]">
+                      AI is evaluating the videos. This usually takes under a minute.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* not yet completed */
+                <div className="flex items-center gap-4 py-2">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-100">
                     <svg className="h-5 w-5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-[14px] font-semibold text-[#4a4a4a]">Result pending</p>
+                    <p className="text-[14px] font-semibold text-[#4a4a4a]">Awaiting completion</p>
                     <p className="text-[12px] text-[#9a9a9a]">
-                      AI evaluation will appear once all videos are processed.
+                      Result will appear once the candidate finishes the verification.
                     </p>
                   </div>
                 </div>

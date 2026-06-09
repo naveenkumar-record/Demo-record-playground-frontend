@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { listRequests, type RequestListItem, type RequestFilters } from "@/api/bluecollar.api";
 import { listWorkflows, type WorkflowItem } from "@/api/workflow.api";
 import { useOrg } from "@/components/layout/orgContext";
+import { useTestMode } from "@/components/layout/testModeContext";
 import { getAccessToken } from "@/lib/auth-client";
 import { toast } from "sonner";
 
@@ -251,6 +252,8 @@ function VerdictBadge({ verdict }: { verdict: RequestListItem["verdict"] }) {
 export default function RequestsPage() {
   const router = useRouter();
   const { activeOrg } = useOrg();
+  const { isTestMode } = useTestMode();
+  const mode = isTestMode ? "test" : "live";
 
   const [requests, setRequests] = useState<RequestListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -273,10 +276,10 @@ export default function RequestsPage() {
     const token = getAccessToken();
     if (!token) return;
 
-    listWorkflows(activeOrg.orgId, 1, 50, "live", token)
+    listWorkflows(activeOrg.orgId, 1, 50, mode, token)
       .then((res) => setWorkflows(res.data?.workflows ?? []))
       .catch(() => undefined);
-  }, [activeOrg?.orgId]);
+  }, [activeOrg?.orgId, mode]);
 
   const loadRequests = useCallback(() => {
     if (!activeOrg?.orgId) return;
@@ -287,11 +290,11 @@ export default function RequestsPage() {
     if (filterWorkflow) filters.workflowId = filterWorkflow;
     if (filterStatus)   filters.status     = filterStatus;
 
-    const key = `${activeOrg.orgId}|${page}|${filterWorkflow}|${filterStatus}|${filterTrust}`;
+    const key = `${activeOrg.orgId}|${mode}|${page}|${filterWorkflow}|${filterStatus}|${filterTrust}`;
     fetchKeyRef.current = key;
     setLoading(true);
 
-    listRequests(activeOrg.orgId, page, PAGE_LIMIT, token, filters)
+    listRequests(activeOrg.orgId, page, PAGE_LIMIT, mode, token, filters)
       .then((res) => {
         if (fetchKeyRef.current !== key) return;
         if (res.data) {
@@ -311,7 +314,7 @@ export default function RequestsPage() {
       .finally(() => {
         if (fetchKeyRef.current === key) setLoading(false);
       });
-  }, [activeOrg?.orgId, page, filterWorkflow, filterStatus, filterTrust]);
+  }, [activeOrg?.orgId, mode, page, filterWorkflow, filterStatus, filterTrust]);
 
   useEffect(() => {
     loadRequests();

@@ -47,6 +47,7 @@ export const listRequests = (
   orgId: string,
   page: number,
   limit: number,
+  mode: "live" | "test",
   accessToken: string,
   filters?: RequestFilters,
   signal?: AbortSignal,
@@ -55,6 +56,7 @@ export const listRequests = (
     orgId,
     page: String(page),
     limit: String(limit),
+    mode,
   };
   if (filters?.workflowId) params.workflowId = filters.workflowId;
   if (filters?.status) params.status = filters.status;
@@ -111,12 +113,13 @@ export type RequestDetail = {
 
 export const getRequestDetail = (
   candidateId: string,
+  mode: "live" | "test",
   accessToken: string,
   signal?: AbortSignal,
 ) =>
   getRequest<RequestDetail>(
     `${apiPathConstants.bluecollar.requests}/${encodeURIComponent(candidateId)}`,
-    { accessToken, signal },
+    { accessToken, signal, params: { mode } },
   );
 
 // ── logs ───────────────────────────────────────────────────────────────────────
@@ -157,6 +160,7 @@ export const listLogs = (
   orgId: string,
   page: number,
   limit: number,
+  mode: "live" | "test",
   accessToken: string,
   filters?: LogFilters,
   signal?: AbortSignal,
@@ -165,6 +169,7 @@ export const listLogs = (
     orgId,
     page: String(page),
     limit: String(limit),
+    mode,
   };
   if (filters?.workflowId)     params.workflowId     = filters.workflowId;
   if (filters?.whatsappStatus) params.whatsappStatus = filters.whatsappStatus;
@@ -176,9 +181,9 @@ export const listLogs = (
   });
 };
 
-export const resendLog = (candidateId: string, accessToken: string) =>
-  postRequest<{ wamid: string }, Record<string, never>>(
+export const resendLog = (candidateId: string, mode: "live" | "test", accessToken: string) =>
+  postRequest<{ wamid: string }, { mode: string }>(
     `${apiPathConstants.bluecollar.logs}/${encodeURIComponent(candidateId)}/resend`,
-    {},
+    { mode },
     { accessToken },
   );

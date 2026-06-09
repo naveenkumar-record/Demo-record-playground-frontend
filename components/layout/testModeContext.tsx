@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState } from "react";
 
 type TestModeContextValue = {
   isTestMode: boolean;
@@ -13,12 +13,10 @@ const TestModeContext = createContext<TestModeContextValue>({
 });
 
 export function TestModeProvider({ children }: { children: React.ReactNode }) {
-  const [isTestMode, setIsTestModeState] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("record:testMode");
-    if (stored === "true") setIsTestModeState(true);
-  }, []);
+  const [isTestMode, setIsTestModeState] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("record:testMode") === "true";
+  });
 
   const setIsTestMode = (v: boolean) => {
     setIsTestModeState(v);
