@@ -135,7 +135,10 @@ export default function Header({ userInitial, email }: HeaderProps) {
           </Button>
 
           {pathname.startsWith("/settings") ? (
-            <div className="flex items-center gap-3 mt-2">
+            <div
+              className="flex items-center gap-3 mt-2 cursor-pointer"
+              onClick={() => router.push("/bluecollar/dashboard")}
+            >
               <Image src="/logo.png" alt="Record" width={24} height={24} className="rounded" />
               <span className="text-xl font-semibold text-gray-800">Record Studio</span>
             </div>
