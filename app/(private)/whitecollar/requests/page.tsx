@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useOrg }      from "@/components/layout/orgContext";
 import { useProject }  from "@/components/layout/projectContext";
 import { useTestMode } from "@/components/layout/testModeContext";
+import PaginationControl from "@/components/ui/pagination-control";
 import {
   listSmartAiAssessments,
   getSmartAiSessions,
@@ -105,6 +106,8 @@ export default function WhitecollarRequestsPage() {
   // ── Assessment list state ─────────────────────────────────────────────────
   const [assessments, setAssessments] = useState<SmartAiAssessmentItem[]>([]);
   const [loading,     setLoading]     = useState(true);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   // ── Selected assessment (drill-down) ─────────────────────────────────────
   const [selected,  setSelected]  = useState<SmartAiAssessmentItem | null>(null);
@@ -124,6 +127,7 @@ export default function WhitecollarRequestsPage() {
     try {
       const res = await listSmartAiAssessments(orgId, getToken(), mode);
       setAssessments(res.data?.assessments ?? []);
+      setPage(1);
     } catch {
       toast.error("Failed to load Smart AI assessments");
     } finally {
@@ -229,6 +233,10 @@ export default function WhitecollarRequestsPage() {
     );
   }
 
+  // ── Pagination ─────────────────────────────────────────────────────────────
+  const totalPages = Math.max(1, Math.ceil(assessments.length / PAGE_SIZE));
+  const pagedAssessments = assessments.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   // ── List view ──────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 p-6">
@@ -269,7 +277,7 @@ export default function WhitecollarRequestsPage() {
                 </td>
               </tr>
             ) : (
-              assessments.map((a) => (
+              pagedAssessments.map((a) => (
                 <tr
                   key={a.assessmentId}
                   onClick={() => openAssessment(a)}
@@ -286,6 +294,16 @@ export default function WhitecollarRequestsPage() {
           </tbody>
         </table>
       </div>
+
+      {!loading && assessments.length > PAGE_SIZE && (
+        <div className="flex justify-end px-1 pt-1">
+          <PaginationControl
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+          />
+        </div>
+      )}
     </div>
   );
 }
