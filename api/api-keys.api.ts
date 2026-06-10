@@ -1,5 +1,17 @@
-import { getRequest, postRequest, deleteRequest } from "@/config/http.config";
+import { getRequest, postRequest, deleteRequest, patchRequest } from "@/config/http.config";
 import apiPathConstants from "@/constants/api-path.constants";
+
+export type QuestionRowConfig = {
+  type: "mcq" | "true-false" | "short-answer" | "long-answer" | "coding";
+  count: number;
+  marksEach: number;
+  enabled: boolean;
+};
+
+export type AssessConfig = {
+  questionRows: QuestionRowConfig[];
+  difficultyLevel: "easy" | "medium" | "hard";
+};
 
 export type ApiKey = {
   _id: string;
@@ -9,6 +21,8 @@ export type ApiKey = {
   keyId: string;
   apiKey: string;
   mode: "test" | "live";
+  emailNotificationsEnabled?: boolean;
+  assessConfig?: AssessConfig;
   createdAt: string;
   updatedAt: string;
 };
@@ -43,6 +57,21 @@ export const createApiKey = (
 
 export const deleteApiKey = (orgId: string, keyId: string, accessToken: string) =>
   deleteRequest(`${apiPathConstants.apiKeys.base}/${keyId}`, {
+    accessToken,
+    params: { orgId },
+  });
+
+export const updateAssessConfig = (
+  orgId: string,
+  keyId: string,
+  assessConfig: AssessConfig,
+  accessToken: string,
+  emailNotificationsEnabled?: boolean,
+) =>
+  patchRequest<ApiKey>(`${apiPathConstants.apiKeys.base}/${keyId}/assess-config`, {
+    assessConfig,
+    ...(emailNotificationsEnabled !== undefined ? { emailNotificationsEnabled } : {}),
+  }, {
     accessToken,
     params: { orgId },
   });
