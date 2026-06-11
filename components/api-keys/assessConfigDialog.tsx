@@ -144,7 +144,7 @@ export function AssessConfigDialog({ open, onClose, keyData, onUpdated }: Props)
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!saving && !o) onClose(); }}>
-      <DialogContent className="max-w-[620px] p-0">
+      <DialogContent className="max-w-[620px] p-0 flex flex-col max-h-[80vh]">
         <DialogHeader className="border-b border-neutral-200 px-5 py-4">
           <DialogTitle className="text-[15px] font-semibold">Assessment Configuration</DialogTitle>
           <p className="text-[12px] text-[#8a8a8a]">
@@ -152,7 +152,7 @@ export function AssessConfigDialog({ open, onClose, keyData, onUpdated }: Props)
           </p>
         </DialogHeader>
 
-        <div className="px-5 py-4 space-y-5">
+        <div className="px-5 py-4 space-y-5 overflow-y-auto flex-1 min-h-0">
           {/* Email Notifications */}
           <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
             <div>
