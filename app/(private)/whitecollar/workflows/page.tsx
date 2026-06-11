@@ -8,9 +8,9 @@ import {
   Key,
   MoreVertical,
   Plus,
+  Settings2,
   Trash2,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useOrg } from "@/components/layout/orgContext";
 import { useProject } from "@/components/layout/projectContext";
@@ -47,6 +47,7 @@ import {
   type ApiKey,
   type ApiKeyCreated,
 } from "@/api/api-keys.api";
+import { AssessConfigDialog } from "@/components/api-keys/assessConfigDialog";
 import PaginationControl from "@/components/ui/pagination-control";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -129,11 +130,13 @@ export default function WorkflowsPage() {
   // Create modal
   const [createOpen, setCreateOpen] = useState(false);
   const [keyName, setKeyName] = useState("");
-  const [emailEnabled, setEmailEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   // Reveal modal (shown once after creation)
   const [revealOpen, setRevealOpen] = useState(false);
   const [revealedKey, setRevealedKey] = useState<ApiKeyCreated | null>(null);
+  // Assess config dialog
+  const [configOpen, setConfigOpen] = useState(false);
+  const [configKey, setConfigKey] = useState<ApiKey | null>(null);
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchKeys = useCallback(async () => {
     if (!orgId) return;
@@ -171,7 +174,6 @@ export default function WorkflowsPage() {
           name: keyName.trim(),
           mode,
           projectId,
-          emailNotificationsEnabled: emailEnabled,
         },
         getAccessToken(),
       );
@@ -181,7 +183,6 @@ export default function WorkflowsPage() {
         setRevealedKey(created);
         setCreateOpen(false);
         setKeyName("");
-        setEmailEnabled(false);
         setRevealOpen(true);
       }
     } catch (err: unknown) {
@@ -223,7 +224,6 @@ export default function WorkflowsPage() {
             className="h-10 gap-2 bg-[#ff5723] px-5 text-[13px] font-semibold text-white hover:bg-[#f04d1d]"
             onClick={() => {
               setKeyName("");
-              setEmailEnabled(false);
               setCreateOpen(true);
             }}
           >
@@ -314,9 +314,16 @@ export default function WorkflowsPage() {
                             <MoreVertical className="h-4 w-4 text-[#697282]" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuContent align="end" className="w-52">
                           <DropdownMenuItem
                             className="text-sm text-black"
+                            onClick={() => { setConfigKey(k); setConfigOpen(true); }}
+                          >
+                            <Settings2 className="mr-2 h-3.5 w-3.5" />
+                            Configure Assessment
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-sm text-red-600"
                             onClick={() => handleDelete(k.keyId)}
                           >
                             <Trash2 className="mr-2 h-3.5 w-3.5" />
@@ -375,16 +382,6 @@ export default function WorkflowsPage() {
               />
             </div>
 
-            {/* Email Notifications toggle */}
-            <div className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-3">
-              <p className="text-[13px] font-semibold text-[#1a1a1a]">Email Notifications</p>
-              <Switch
-                checked={emailEnabled}
-                onCheckedChange={setEmailEnabled}
-                disabled={saving}
-              />
-            </div>
-
             <div className="flex items-center gap-2 rounded-md bg-neutral-50 px-3 py-2 text-sm text-[#6a6a6a]">
               <span className="font-medium">Mode:</span>
               <Badge
@@ -421,6 +418,23 @@ export default function WorkflowsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Assess config dialog ────────────────────────────────────────── */}
+      {configKey && (
+        <AssessConfigDialog
+          open={configOpen}
+          onClose={() => { setConfigOpen(false); setConfigKey(null); }}
+          keyData={configKey}
+          onUpdated={(updated) => {
+            setKeys((prev) => prev.map((k) =>
+              k.keyId === updated.keyId
+                ? { ...k, assessConfig: updated.assessConfig, emailNotificationsEnabled: updated.emailNotificationsEnabled }
+                : k,
+            ));
+            setConfigKey(null);
+          }}
+        />
+      )}
 
       {/* ── Key reveal modal ────────────────────────────────────────────── */}
       <Dialog open={revealOpen} onOpenChange={setRevealOpen}>
