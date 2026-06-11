@@ -130,6 +130,7 @@ export default function WorkflowsPage() {
   // Create modal
   const [createOpen, setCreateOpen] = useState(false);
   const [keyName, setKeyName] = useState("");
+  const [emailEnabled, setEmailEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   // Reveal modal (shown once after creation)
   const [revealOpen, setRevealOpen] = useState(false);
