@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BookOpen,
   ClipboardList,
   FileText,
   LayoutDashboard,
@@ -64,6 +65,13 @@ export const whitecollarNav: NavGroup[] = [
   {
     group: "Developer",
     items: [
+      
+      {
+        label: "Documentation",
+        href: "https://docs.userecord.io/smartai/introduction",
+        icon: BookOpen,
+        external: true,
+      },
       {
         label: "Support",
         href: "https://cal.com/tharunm/30min",
@@ -71,5 +79,6 @@ export const whitecollarNav: NavGroup[] = [
         external: true,
       },
     ],
+    
   },
 ];
