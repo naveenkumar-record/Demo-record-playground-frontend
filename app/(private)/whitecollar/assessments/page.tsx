@@ -127,6 +127,9 @@ export default function AssessmentsPage() {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentFrom = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const currentTo = Math.min(page * PAGE_SIZE, total);
 
   // ── Modal state ─────────────────────────────────────────────────────────────
   const [modalOpen,  setModalOpen]  = useState(false);
@@ -275,10 +278,10 @@ export default function AssessmentsPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-md border border-neutral-200 bg-white [&_th]:px-6 [&_th]:py-4 [&_td]:px-6">
+      <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white [&_thead_tr]:border-b [&_thead_tr]:bg-white [&_thead_tr:hover]:bg-white [&_th]:h-14 [&_th]:px-6 [&_th]:text-[13px] [&_th]:font-medium [&_th]:text-[#6f7582] [&_tbody_tr]:h-[64px] [&_tbody_tr]:border-b [&_tbody_tr:hover]:bg-neutral-50 [&_td]:px-6">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="border-b bg-white hover:bg-white">
               <TableHead>Assessment Name</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Status</TableHead>
@@ -294,7 +297,7 @@ export default function AssessmentsPage() {
               <EmptyState onAdd={() => setModalOpen(true)} />
             ) : (
               assessments.map((assessment) => (
-                <TableRow key={assessment.assessmentId}>
+                <TableRow key={assessment.assessmentId} className="h-[64px] border-b hover:bg-neutral-50">
                   {/* Name + ID */}
                   <TableCell>
                     <p className="text-[13px] font-semibold text-[#1f1f1f]">
@@ -335,9 +338,9 @@ export default function AssessmentsPage() {
                   <TableCell className="pr-5">
                     <div className="flex items-center justify-end gap-2">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-9 w-9 cursor-pointer rounded-md border-neutral-200 bg-white shadow-sm hover:bg-neutral-50"
                         onClick={() => setEditTarget(assessment)}
                       >
                         <Pencil className="h-4 w-4 text-[#697282]" />
@@ -345,11 +348,11 @@ export default function AssessmentsPage() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-9 w-9 cursor-pointer rounded-md border-neutral-200 bg-white shadow-sm hover:bg-neutral-50"
                           >
-                            <MoreVertical className="h-4 w-4 text-[#697282]" />
+                            <MoreVertical className="h-4 w-4 text-[#1f1f1f]" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44">
@@ -383,13 +386,13 @@ export default function AssessmentsPage() {
               ))
             )}
           </TableBody>
-        </Table>        
-      </div>
+        </Table>
       {!loading && total > 0 && (
-          <div className="flex items-center justify-end px-5 py-4">
+          <div className="flex items-center justify-between border-t border-neutral-200 bg-neutral-50 px-6 py-4 text-[13px] text-[#6f7582]">
+            <p>{`Showing ${currentFrom}-${currentTo} of ${total} Assessment${total === 1 ? "" : "s"}`}</p>
             <PaginationControl
               currentPage={page}
-              totalPages={Math.max(1, Math.ceil(total / PAGE_SIZE))}
+              totalPages={totalPages}
               onPageChange={(p) => {
                 setPage(p);
                 fetchAssessments(p);
@@ -397,6 +400,7 @@ export default function AssessmentsPage() {
             />
           </div>
         )}
+      </div>
 
       {/* Create Assessment Modal */}
       <CreateAssessmentModal

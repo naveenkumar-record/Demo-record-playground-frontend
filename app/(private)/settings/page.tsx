@@ -49,6 +49,7 @@ const ORG_ROLE_OPTIONS = [
 ] as const;
 
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+const PIN_CODE_REGEX = /^[0-9]{6}$/;
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type ExtraSettings = {
@@ -265,7 +266,6 @@ export default function SettingsPage() {
       .finally(() => {
         if (fetchedRef.current === orgId) setExtraLoading(false);
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeOrg?.orgId, activeOrg?.orgName, activeOrg?.orgRole]);
 
   useEffect(() => {
@@ -289,7 +289,10 @@ export default function SettingsPage() {
       errors.streetAddress = "Street address is required";
     if (!city.trim()) errors.city = "City is required";
     if (!stateVal.trim()) errors.state = "State is required";
-    if (!pinCode.trim()) errors.pinCode = "Pin code is required";
+    const p = pinCode.trim();
+    if (!p) errors.pinCode = "Pin code is required";
+    else if (!PIN_CODE_REGEX.test(p))
+      errors.pinCode = "Pin code must be 6 digits";
     if (!country.trim()) errors.country = "Country is required";
     const g = gstNo.trim().toUpperCase();
     if (g && !GST_REGEX.test(g))
@@ -495,8 +498,9 @@ export default function SettingsPage() {
     streetAddress.trim() !== "" &&
     city.trim() !== "" &&
     stateVal.trim() !== "" &&
-    pinCode.trim() !== "" &&
-    country.trim() !== "";
+    PIN_CODE_REGEX.test(pinCode.trim()) &&
+    country.trim() !== "" &&
+    (!gstNo.trim() || GST_REGEX.test(gstNo.trim().toUpperCase()));
 
   return (
     <div className="w-full p-4 sm:p-8 pb-16">
@@ -704,10 +708,13 @@ export default function SettingsPage() {
                   )}
                   value={extraLoading ? "" : pinCode}
                   onChange={(e) => {
-                    setPinCode(e.target.value);
+                    setPinCode(e.target.value.replace(/\D/g, "").slice(0, 6));
                     clearError("pinCode");
                   }}
                   disabled={!canEdit || extraLoading}
+                  inputMode="numeric"
+                  maxLength={6}
+                  pattern="[0-9]*"
                   placeholder={extraLoading ? "Loading…" : "e.g. 641019"}
                 />
               </Field>
@@ -729,12 +736,12 @@ export default function SettingsPage() {
               </Field>
             </div>
 
-            {canEdit && isFormComplete && (
+            {canEdit && (
               <div className="flex justify-end pt-1">
                 <Button
                   className="h-10 bg-orange-600 px-7 text-[13px] font-medium text-white hover:bg-orange-700"
                   onClick={handleSave}
-                  disabled={saving || extraLoading}
+                  disabled={!isFormComplete || saving || extraLoading}
                 >
                   {saving ? "Saving…" : "Save Changes"}
                 </Button>
@@ -744,33 +751,27 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="p-4 border border-[#e7e7e7] rounded-lg">
-        <div className="flex items-center gap-2 mb-4">
-          <AlertTriangleIcon className="h-4 w-4 text-[#c8382b]" />
-          <span className="text-md font-medium text-[#c8382b]">
-            Danger Zone
-          </span>
+      <div className="space-y-7">
+        <div>
+          <h2 className="text-[20px] font-semibold text-[#111827]">
+            {viewerRole === "owner" ? "Delete account" : "Leave organization"}
+          </h2>
+          <p className="mt-4 max-w-[780px] text-[15px] leading-6 text-[#344054]">
+            {viewerRole === "owner"
+              ? "We'd hate to see you go, but you're welcome to delete your account anytime. Just remember, once you delete it, it's gone forever."
+              : "You can leave this organization anytime. Your other organizations are not affected."}
+          </p>
         </div>
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-md font-semibold text-[#1a1a1a]">
-              {viewerRole === "owner"
-                ? "Delete organization"
-                : "Leave organization"}
-            </span>
-            <span className="text-sm text-[#8a8a8a]">
-              {viewerRole === "owner"
-                ? "Permanently delete this organization and remove all members."
-                : "Remove yourself from this organization. Your other organizations are not affected."}
-            </span>
-          </div>
+
+        <div className="flex min-h-[104px] items-center justify-between rounded-lg border border-[#f4caca] bg-[#fff3f3] px-6 py-5">
+          <span className="text-[15px] font-medium text-[#ff5723]">
+            This action cannot be undone!
+          </span>
           <Button
-            variant="outline"
-            size="sm"
-            className="ml-6 h-9 shrink-0 border-[#fde8e8] px-4 text-sm font-medium text-[#c8382b] hover:border-[#c8382b] hover:bg-[#fff5f5] hover:text-[#c8382b]"
+            className="ml-6 h-11 shrink-0 rounded-md bg-[#ef5b4d] px-6 text-[14px] font-semibold text-white hover:bg-[#df4e41]"
             onClick={() => setDeleteDialogOpen(true)}
           >
-            {viewerRole === "owner" ? "Delete" : "Leave"}
+            {viewerRole === "owner" ? "Delete account" : "Leave organization"}
           </Button>
         </div>
       </div>

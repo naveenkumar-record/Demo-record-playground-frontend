@@ -105,8 +105,10 @@ export default function AssignmentDetailPage() {
     });
   }, [activeOrg?.orgId, assignmentId, mode]);
 
-  const candidates     = assignment?.candidates ?? [];
+  const candidates     = useMemo(() => assignment?.candidates ?? [], [assignment?.candidates]);
   const totalPages     = Math.max(1, Math.ceil(candidates.length / PAGE_SIZE));
+  const currentFrom    = candidates.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const currentTo      = Math.min(currentPage * PAGE_SIZE, candidates.length);
   const paginated      = useMemo(
     () => candidates.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
     [candidates, currentPage],
@@ -164,10 +166,10 @@ export default function AssignmentDetailPage() {
       </div>
 
       {/* Candidate table */}
-      <div className="rounded-md border border-neutral-200 bg-white [&_th]:px-6 [&_th]:py-4 [&_td]:px-6">
+      <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white [&_thead_tr]:border-b [&_thead_tr]:bg-white [&_thead_tr:hover]:bg-white [&_th]:h-14 [&_th]:px-6 [&_th]:text-[13px] [&_th]:font-medium [&_th]:text-[#6f7582] [&_tbody_tr]:h-[64px] [&_tbody_tr]:border-b [&_tbody_tr:hover]:bg-neutral-50 [&_td]:px-6">
         <Table>
-          <TableHeader className="bg-neutral-50">
-            <TableRow>
+          <TableHeader>
+            <TableRow className="border-b bg-white hover:bg-white">
               <TableHead className="w-[220px]">Name</TableHead>
               <TableHead className="w-[130px]">Email</TableHead>
               <TableHead className="w-[130px]">Status</TableHead>
@@ -185,7 +187,7 @@ export default function AssignmentDetailPage() {
               </TableRow>
             ) : (
               paginated.map((c) => (
-                <TableRow key={c.candidateId}>
+                <TableRow key={c.candidateId} className="h-[64px] border-b hover:bg-neutral-50">
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-[12px] font-semibold text-[#5a5a5a]">
@@ -229,15 +231,16 @@ export default function AssignmentDetailPage() {
             )}
           </TableBody>
         </Table>
-      </div>
-
-      {/* Pagination */}
-      <div className="mt-4 flex items-center justify-end">
+      {candidates.length > 0 && (
+      <div className="flex items-center justify-between border-t border-neutral-200 bg-neutral-50 px-6 py-4 text-[13px] text-[#6f7582]">
+        <p>{`Showing ${currentFrom}-${currentTo} of ${candidates.length} Candidate${candidates.length === 1 ? "" : "s"}`}</p>
         <PaginationControl
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={(p) => setCurrentPage(p)}
         />
+      </div>
+      )}
       </div>
     </div>
   );

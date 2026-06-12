@@ -119,12 +119,13 @@ export const createWorkflowCandidates = (
   candidates: WorkflowCandidatePayload[],
   accessToken: string,
   language?: string,
+  followUpCallEnabled?: boolean,
 ) =>
   postRequest<
     { candidates: unknown[] },
-    { candidates: WorkflowCandidatePayload[]; language?: string }
+    { candidates: WorkflowCandidatePayload[]; language?: string; followUpCallEnabled?: boolean }
   >(
     `${apiPathConstants.workflows.base}/${workflowId}/candidates`,
-    { candidates, language },
+    { candidates, language, followUpCallEnabled },
     { accessToken },
   );

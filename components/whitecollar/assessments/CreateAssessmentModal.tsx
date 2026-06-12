@@ -133,12 +133,12 @@ function numbersOnly(value: string) {
 
 function ProgressBar({ step, total }: { step: number; total: number }) {
   return (
-    <div className="mt-1 flex gap-1.5">
+    <div className="mt-2 flex gap-[6px]">
       {Array.from({ length: total }).map((_, i) => (
         <span
           key={i}
           className={cn(
-            "h-[3px] flex-1 rounded-full transition-colors",
+            "h-1 w-12 rounded-full transition-colors",
             i < step ? "bg-[#ff5723]" : "bg-neutral-200",
           )}
         />

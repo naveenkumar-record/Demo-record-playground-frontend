@@ -70,11 +70,21 @@ function SkillPickerDialog({
   const [searching, setSearching] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => { if (!open) { setQuery(""); setResults([]); } }, [open]);
+  useEffect(() => {
+    if (!open) {
+      void Promise.resolve().then(() => {
+        setQuery("");
+        setResults([]);
+      });
+    }
+  }, [open]);
 
   useEffect(() => {
     const trimmed = query.trim();
-    if (trimmed.length < 2) { setResults([]); return; }
+    if (trimmed.length < 2) {
+      void Promise.resolve().then(() => setResults([]));
+      return;
+    }
     abortRef.current?.abort();
     abortRef.current = new AbortController();
     const timer = window.setTimeout(() => {
@@ -244,15 +254,15 @@ export default function EditAssessmentModal({ open, assessment, orgId, onClose, 
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-        <DialogContent className="max-h-[90vh] sm:max-w-[800px] overflow-y-auto p-0" showCloseButton>
-          <DialogHeader className="border-b border-neutral-200 px-6 py-4">
+        <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[800px]" showCloseButton>
+          <DialogHeader className="shrink-0 border-b border-neutral-200 px-6 py-4">
             <DialogTitle className="text-[16px] font-semibold">Edit Assessment</DialogTitle>
             <p className="text-[12px] text-[#8a8a8a]">
               {assessment?.assessmentType ?? ""} · {assessment?.assessmentId}
             </p>
           </DialogHeader>
 
-          <div className="space-y-5 px-6 py-5">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
 
             {/* Name + Job Title */}
             <div className="grid grid-cols-2 gap-4">
@@ -406,7 +416,7 @@ export default function EditAssessmentModal({ open, assessment, orgId, onClose, 
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between border-t border-neutral-200 px-6 py-4">
+          <div className="shrink-0 flex items-center justify-between border-t border-neutral-200 bg-white px-6 py-4">
             <Button variant="outline" onClick={handleClose} disabled={saving}>Cancel</Button>
             <Button
               className="bg-[#ff5723] text-white hover:bg-[#f04d1d]"

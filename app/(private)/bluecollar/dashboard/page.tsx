@@ -217,13 +217,6 @@ export default function DashboardPage() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-[16px] font-semibold text-[#1f1f1f]">Workflow-wise Usage</h2>
-          <Button
-            variant="outline"
-            className="h-8 rounded-md px-3 text-[12px]"
-            onClick={() => router.push("/bluecollar/workflows")}
-          >
-            View all
-          </Button>
         </div>
 
         <div className="overflow-hidden rounded-md border border-neutral-200 bg-white">

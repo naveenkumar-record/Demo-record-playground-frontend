@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronDown, MoreVertical, Search, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, MoreVertical, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,7 +23,7 @@ import { toast } from "sonner";
 
 const PAGE_LIMIT = 10;
 
-// ── status/trust options ───────────────────────────────────────────────────────
+// Status/trust options
 
 const STATUS_OPTIONS = [
   { label: "Completed", value: "completed" },
@@ -37,7 +37,7 @@ const TRUST_OPTIONS = [
   { label: "Pending", value: "" },
 ];
 
-// ── helpers ────────────────────────────────────────────────────────────────────
+// Helpers
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -47,7 +47,7 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-// ── dropdown component ─────────────────────────────────────────────────────────
+// Dropdown component
 
 function FilterDropdown({
   label,
@@ -199,7 +199,7 @@ function WorkflowFilterDropdown({
   );
 }
 
-// ── badges ─────────────────────────────────────────────────────────────────────
+// Badges
 
 function StatusBadge({ status }: { status: RequestListItem["status"] }) {
   return (
@@ -232,7 +232,7 @@ function TrustBadge({ score }: { score: RequestListItem["trustBadge"] }) {
 }
 
 function VerdictBadge({ verdict }: { verdict: RequestListItem["verdict"] }) {
-  if (!verdict) return <span className="text-[12px] text-[#9a9a9a]">—</span>;
+  if (!verdict) return <span className="text-[12px] text-[#9a9a9a]">-</span>;
   return (
     <span
       className={cn(
@@ -247,13 +247,14 @@ function VerdictBadge({ verdict }: { verdict: RequestListItem["verdict"] }) {
   );
 }
 
-// ── page ───────────────────────────────────────────────────────────────────────
+// Page
 
 export default function RequestsPage() {
   const router = useRouter();
   const { activeOrg } = useOrg();
   const { isTestMode } = useTestMode();
   const mode = isTestMode ? "test" : "live";
+  const orgId = activeOrg?.orgId ?? "";
 
   const [requests, setRequests] = useState<RequestListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -272,17 +273,17 @@ export default function RequestsPage() {
 
   // Fetch workflows once for the dropdown
   useEffect(() => {
-    if (!activeOrg?.orgId) return;
+    if (!orgId) return;
     const token = getAccessToken();
     if (!token) return;
 
-    listWorkflows(activeOrg.orgId, 1, 50, mode, token)
+    listWorkflows(orgId, 1, 50, mode, token)
       .then((res) => setWorkflows(res.data?.workflows ?? []))
       .catch(() => undefined);
-  }, [activeOrg?.orgId, mode]);
+  }, [orgId, mode]);
 
   const loadRequests = useCallback(() => {
-    if (!activeOrg?.orgId) return;
+    if (!orgId) return;
     const token = getAccessToken();
     if (!token) return;
 
@@ -290,11 +291,11 @@ export default function RequestsPage() {
     if (filterWorkflow) filters.workflowId = filterWorkflow;
     if (filterStatus)   filters.status     = filterStatus;
 
-    const key = `${activeOrg.orgId}|${mode}|${page}|${filterWorkflow}|${filterStatus}|${filterTrust}`;
+    const key = `${orgId}|${mode}|${page}|${filterWorkflow}|${filterStatus}|${filterTrust}`;
     fetchKeyRef.current = key;
     setLoading(true);
 
-    listRequests(activeOrg.orgId, page, PAGE_LIMIT, mode, token, filters)
+    listRequests(orgId, page, PAGE_LIMIT, mode, token, filters)
       .then((res) => {
         if (fetchKeyRef.current !== key) return;
         if (res.data) {
@@ -314,16 +315,11 @@ export default function RequestsPage() {
       .finally(() => {
         if (fetchKeyRef.current === key) setLoading(false);
       });
-  }, [activeOrg?.orgId, mode, page, filterWorkflow, filterStatus, filterTrust]);
+  }, [orgId, mode, page, filterWorkflow, filterStatus, filterTrust]);
 
   useEffect(() => {
-    loadRequests();
+    void Promise.resolve().then(loadRequests);
   }, [loadRequests]);
-
-  // Reset to page 1 when filter changes
-  useEffect(() => {
-    setPage(1);
-  }, [filterWorkflow, filterStatus, filterTrust]);
 
   const filtered = search.trim()
     ? requests.filter((r) =>
@@ -344,28 +340,51 @@ export default function RequestsPage() {
           <WorkflowFilterDropdown
             workflows={workflows}
             selected={filterWorkflow}
-            onSelect={setFilterWorkflow}
-            onClear={() => setFilterWorkflow("")}
+            onSelect={(value) => {
+              setFilterWorkflow(value);
+              setPage(1);
+            }}
+            onClear={() => {
+              setFilterWorkflow("");
+              setPage(1);
+            }}
           />
           <FilterDropdown
             label="Status"
             options={STATUS_OPTIONS}
             selected={filterStatus}
-            onSelect={setFilterStatus}
-            onClear={() => setFilterStatus("")}
+            onSelect={(value) => {
+              setFilterStatus(value);
+              setPage(1);
+            }}
+            onClear={() => {
+              setFilterStatus("");
+              setPage(1);
+            }}
           />
           <FilterDropdown
             label="Trust Score"
             options={TRUST_OPTIONS}
             selected={filterTrust}
-            onSelect={setFilterTrust}
-            onClear={() => setFilterTrust("")}
+            onSelect={(value) => {
+              setFilterTrust(value);
+              setPage(1);
+            }}
+            onClear={() => {
+              setFilterTrust("");
+              setPage(1);
+            }}
           />
           {hasActiveFilter && (
             <button
               type="button"
               className="text-[12px] text-[#9a9a9a] hover:text-[#4a4a4a]"
-              onClick={() => { setFilterWorkflow(""); setFilterStatus(""); setFilterTrust(""); }}
+              onClick={() => {
+                setFilterWorkflow("");
+                setFilterStatus("");
+                setFilterTrust("");
+                setPage(1);
+              }}
             >
               Clear all
             </button>
@@ -382,42 +401,42 @@ export default function RequestsPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-md border border-neutral-200 bg-white">
+      <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
         <Table>
           <TableHeader>
-            <TableRow className="bg-white hover:bg-white">
-              <TableHead className="h-12 px-5 text-[13px] font-medium text-[#7a7a7a]">
+            <TableRow className="border-b bg-white hover:bg-white">
+              <TableHead className="h-14 px-6 text-[13px] font-medium text-[#6f7582]">
                 Candidate Name
               </TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
+              <TableHead className="px-6 text-[13px] font-medium text-[#6f7582]">
                 Phone Number
               </TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
+              <TableHead className="px-6 text-[13px] font-medium text-[#6f7582]">
                 Status
               </TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
+              <TableHead className="px-6 text-[13px] font-medium text-[#6f7582]">
                 Workflow Name
               </TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
+              <TableHead className="px-6 text-[13px] font-medium text-[#6f7582]">
                 Requested On
               </TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
+              <TableHead className="px-6 text-[13px] font-medium text-[#6f7582]">
                 Trust Score
               </TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
+              <TableHead className="px-6 text-[13px] font-medium text-[#6f7582]">
                 Verdict
               </TableHead>
-              <TableHead className="pr-5 text-right text-[13px] font-medium text-[#7a7a7a]">
+              {/* <TableHead className="px-6 text-right text-[13px] font-medium text-[#6f7582]">
                 Action
-              </TableHead>
+              </TableHead> */}
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 8 }).map((__, j) => (
-                    <TableCell key={j} className={j === 0 ? "px-5 py-4" : ""}>
+                  {Array.from({ length: 7 }).map((__, j) => (
+                    <TableCell key={j} className={j === 0 ? "px-6 py-5" : "px-6"}>
                       <div className="h-4 w-24 animate-pulse rounded bg-neutral-100" />
                     </TableCell>
                   ))}
@@ -435,51 +454,51 @@ export default function RequestsPage() {
               filtered.map((req) => (
                 <TableRow
                   key={req.candidateId}
-                  className="cursor-pointer hover:bg-neutral-50"
+                  className="h-[64px] cursor-pointer border-b hover:bg-neutral-50"
                   onClick={() => router.push(`/bluecollar/requests/${req.candidateId}`)}
                 >
-                  <TableCell className="px-5 py-4 text-[13px] font-semibold text-[#1f1f1f]">
+                  <TableCell className="px-6 py-4 text-[13px] font-semibold text-[#111827]">
                     {req.candidateName}
                   </TableCell>
-                  <TableCell className="text-[13px] text-[#4a4a4a]">
+                  <TableCell className="px-6 text-[13px] text-[#2f3b4c]">
                     {req.phoneNumber}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="px-6">
                     <StatusBadge status={req.status} />
                   </TableCell>
-                  <TableCell className="text-[13px] text-[#4a4a4a]">
+                  <TableCell className="px-6 text-[13px] text-[#2f3b4c]">
                     {req.workflowName}
                   </TableCell>
-                  <TableCell className="text-[13px] text-[#4a4a4a]">
+                  <TableCell className="px-6 text-[13px] text-[#2f3b4c]">
                     {formatDate(req.requestedOn)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="px-6">
                     <TrustBadge score={req.trustBadge} />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="px-6">
                     <VerdictBadge verdict={req.verdict} />
                   </TableCell>
-                  <TableCell className="pr-5 text-right">
+                  {/* <TableCell className="px-6 text-right">
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="icon"
-                      className="h-8 w-8 cursor-pointer"
+                      className="h-9 w-9 cursor-pointer rounded-md border-neutral-200 bg-white shadow-sm hover:bg-neutral-50"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <MoreVertical className="h-4 w-4 text-[#697282]" />
+                      <MoreVertical className="h-4 w-4 text-[#1f1f1f]" />
                     </Button>
-                  </TableCell>
+                  </TableCell> */}
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
 
-        <div className="flex items-center justify-between border-t border-neutral-200 px-5 py-4 text-[13px] text-[#7a7a7a]">
+        <div className="flex items-center justify-between border-t border-neutral-200 bg-neutral-50 px-6 py-4 text-[13px] text-[#6f7582]">
           <p>
             {loading
               ? "Loading..."
-              : `Showing ${currentFrom}–${currentTo} of ${total} Candidate${total === 1 ? "" : "s"}`}
+              : `Showing ${currentFrom}-${currentTo} of ${total} Candidate${total === 1 ? "" : "s"}`}
           </p>
 
           {/* Numbered pagination */}
@@ -491,32 +510,33 @@ export default function RequestsPage() {
                 disabled={page <= 1 || loading}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-[13px] transition-colors",
+                  "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-[13px] transition-colors",
                   page <= 1 || loading
                     ? "cursor-not-allowed text-neutral-300"
-                    : "text-[#4a4a4a] hover:bg-neutral-100",
+                    : "cursor-pointer text-[#1f1f1f] hover:bg-white",
                 )}
               >
-                ‹ Previous
+                <ChevronLeft className="h-3.5 w-3.5" />
+                Previous
               </button>
 
               {/* Page numbers with ellipsis */}
               {(() => {
-                const pages: (number | "…")[] = [];
+                const pages: (number | "...")[] = [];
                 if (totalPages <= 5) {
                   for (let i = 1; i <= totalPages; i++) pages.push(i);
                 } else {
                   pages.push(1);
-                  if (page > 3) pages.push("…");
+                  if (page > 3) pages.push("...");
                   for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
                     pages.push(i);
                   }
-                  if (page < totalPages - 2) pages.push("…");
+                  if (page < totalPages - 2) pages.push("...");
                   pages.push(totalPages);
                 }
                 return pages.map((p, idx) =>
-                  p === "…" ? (
-                    <span key={`ellipsis-${idx}`} className="px-1 text-neutral-400">…</span>
+                  p === "..." ? (
+                    <span key={`ellipsis-${idx}`} className="px-1 text-neutral-400">...</span>
                   ) : (
                     <button
                       key={p}
@@ -526,7 +546,7 @@ export default function RequestsPage() {
                         "h-8 min-w-[32px] rounded-md px-2 text-[13px] transition-colors",
                         p === page
                           ? "bg-[#ff5723] font-semibold text-white"
-                          : "text-[#4a4a4a] hover:bg-neutral-100",
+                          : "cursor-pointer text-[#1f1f1f] hover:bg-white",
                       )}
                     >
                       {p}
@@ -541,13 +561,14 @@ export default function RequestsPage() {
                 disabled={page >= totalPages || loading}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-[13px] transition-colors",
+                  "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-[13px] transition-colors",
                   page >= totalPages || loading
                     ? "cursor-not-allowed text-neutral-300"
-                    : "text-[#4a4a4a] hover:bg-neutral-100",
+                    : "cursor-pointer text-[#1f1f1f] hover:bg-white",
                 )}
               >
-                Next ›
+                Next
+                <ChevronRight className="h-3.5 w-3.5" />
               </button>
             </div>
           )}
