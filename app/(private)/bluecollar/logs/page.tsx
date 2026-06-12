@@ -60,22 +60,22 @@ const STATUS_META: Record<
   link_delivered: {
     label: "Link Delivered",
     dot:   "bg-green-500",
-    pill:  "bg-green-100 text-green-700",
+    pill:  "text-green-700",
   },
   sent: {
     label: "Sent – Awaiting Reply",
     dot:   "bg-amber-400",
-    pill:  "bg-amber-50 text-amber-600",
+    pill:  "text-amber-600",
   },
   failed: {
     label: "Failed",
     dot:   "bg-red-500",
-    pill:  "bg-red-50 text-red-600",
+    pill:  "text-red-600",
   },
   queued: {
     label: "Queued",
     dot:   "bg-neutral-300",
-    pill:  "bg-neutral-100 text-neutral-500",
+    pill:  "text-neutral-500",
   },
 };
 
@@ -88,7 +88,7 @@ function WhatsAppBadge({
 }) {
   const meta = STATUS_META[status] ?? STATUS_META.queued;
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex max-w-[260px] flex-col gap-0.5">
       <span
         className={cn(
           "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-medium",
@@ -99,7 +99,12 @@ function WhatsAppBadge({
         {meta.label}
       </span>
       {error && (
-        <span className="pl-1 text-[11px] text-[#9a9a9a]">{error}</span>
+        <span
+          className="truncate pl-1 text-[11px] text-[#9a9a9a]"
+          title={error}
+        >
+          {error}
+        </span>
       )}
     </div>
   );
@@ -453,7 +458,7 @@ export default function LogsPage() {
               <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
                 Phone
               </TableHead>
-              <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
+              <TableHead className="w-[280px] text-[13px] font-medium text-[#7a7a7a]">
                 WA Delivery Status
               </TableHead>
               <TableHead className="text-[13px] font-medium text-[#7a7a7a]">
@@ -512,7 +517,7 @@ export default function LogsPage() {
                   </TableCell>
 
                   {/* WA Status */}
-                  <TableCell>
+                  <TableCell className="w-[280px] max-w-[280px]">
                     <WhatsAppBadge
                       status={log.whatsappStatus}
                       error={log.deliveryError}

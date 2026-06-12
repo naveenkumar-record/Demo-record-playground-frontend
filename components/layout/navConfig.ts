@@ -38,12 +38,12 @@ export const bluecollarNav: NavGroup[] = [
       { label: "Logs", href: "/bluecollar/logs", icon: ScrollText },
     ],
   },
-  {
-    group: "Configuration",
-    items: [
-      { label: "Settings", href: "/settings", icon: Settings },
-    ],
-  },
+  // {
+  //   group: "Configuration",
+  //   items: [
+  //     { label: "Settings", href: "/settings", icon: Settings },
+  //   ],
+  // },
 ];
 
 export const whitecollarNav: NavGroup[] = [
