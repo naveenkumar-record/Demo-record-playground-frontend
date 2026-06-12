@@ -18,7 +18,7 @@ type ProfileMenuProps = {
   email?: string;
   letter: string;
 };
-
+ 
 export default function ProfileMenu({ email, letter }: ProfileMenuProps) {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
