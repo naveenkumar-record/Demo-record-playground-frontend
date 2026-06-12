@@ -23,9 +23,13 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
 
   return (
     <div className="flex h-full flex-col">
-
       {/* Logo */}
-      <div className="flex items-center gap-2 mb-4 mt-2 ml-2">
+      <Link
+        href={
+          isWhitecollar ? "/whitecollar/dashboard" : "/bluecollar/dashboard"
+        }
+        className="mb-5 ml-2 mt-2 flex items-center gap-2"
+      >
         <Image
           src="/logo.png"
           alt="Record"
@@ -33,65 +37,70 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
           height={24}
           className="rounded"
         />
-        <span className="text-xl font-semibold text-black">
-          Record Studio
-        </span>
-      </div>
+        <span className="text-xl font-semibold text-black">Record Studio</span>
+      </Link>
 
-      {/* Vertical switcher */}
-      <div className="mb-3 flex rounded-lg bg-neutral-100 p-0.5">
-        <button
-          type="button"
-          onClick={() => router.push("/bluecollar/dashboard")}
+      {/* Product mode toggle */}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={isWhitecollar}
+        aria-label="Switch between blue collar and white collar"
+        onClick={() =>
+          router.push(
+            isWhitecollar ? "/bluecollar/dashboard" : "/whitecollar/dashboard",
+          )
+        }
+        className="relative mb-3 grid h-10 w-full gap-[6px] cursor-pointer grid-cols-2 rounded-lg bg-neutral-100 p-1 text-[13px] font-medium text-neutral-500"
+      >
+        <span
           className={cn(
-            "flex-1 cursor-pointer rounded-md py-1.5 text-[13px] font-medium transition-colors",
-            isWhitecollar
-              ? "text-neutral-500 hover:bg-neutral-200"
-              : "bg-white text-[#1f1f1f] shadow-sm",
+            "absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-md bg-white shadow-sm transition-transform duration-200",
+            isWhitecollar && "translate-x-full",
+          )}
+        />
+        <span
+          className={cn(
+            "relative z-10 grid place-items-center rounded-md border border-transparent bg-transparent transition-colors",
+            !isWhitecollar ? "text-[#1f1f1f]" : "hover:border-neutral-300 hover:bg-neutral-300 hover:text-[#1f1f1f]",
           )}
         >
           Blue Collar
-        </button>
-        <button
-          type="button"
-          onClick={() => router.push("/whitecollar/dashboard")}
+        </span>
+        <span
           className={cn(
-            "flex-1 rounded-md py-1.5 text-[13px] font-medium transition-colors cursor-pointer",
-            !isWhitecollar
-              ? "text-neutral-500 hover:bg-neutral-200"
-              : "bg-white text-[#1f1f1f] shadow-sm",
+            "relative z-10 grid place-items-center rounded-md border border-transparent bg-transparent transition-colors",
+            isWhitecollar ? "text-[#1f1f1f]" : "hover:border-neutral-300 hover:bg-neutral-300 hover:text-[#1f1f1f]",
           )}
         >
           White Collar
-        </button>
-      </div>
+        </span>
+      </button>
 
       {/* Navigation */}
-      <div className="flex flex-col flex-1 space-y-3">
-
+      <div className="flex flex-1 flex-col space-y-5">
         {nav.map(({ group, items }) => (
-          <div key={group} className="space-y-1">
-
+          <div key={group} className="space-y-2">
             {/* Group Label */}
-            <p className="px-1 text-sm text-gray-500">
+            <p className="px-1 text-[14px] font-medium text-[#8a8f98]">
               {group}
             </p>
 
             {/* Links */}
-            <div className="space-y-1">
+            <div className="space-y-2">
               {items.map(({ label, href, icon: Icon, external }) => {
                 const active = pathname === href;
 
                 const className = cn(
-                  "flex cursor-pointer items-center gap-2 rounded-md px-1 py-1.5 text-[15px] transition-colors",
+                  "flex cursor-pointer items-center gap-3 rounded-md px-1 py-1 text-[14px] leading-6 transition-colors",
                   active
-                    ? "bg-gray-100 font-semibold"
-                    : "text-gray-600 hover:bg-gray-100"
+                    ? "font-semibold text-black"
+                    : "font-normal text-[#2f3b4c] hover:text-black",
                 );
 
                 const iconClass = cn(
-                  "h-4 w-4 shrink-0",
-                  active ? "text-orange-600" : "text-gray-500"
+                  "h-5 w-5 shrink-0 stroke-[2]",
+                  active ? "text-[#ff5723]" : "text-[#8a8f98]",
                 );
 
                 return external ? (
@@ -118,24 +127,21 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
                 );
               })}
             </div>
-
           </div>
         ))}
-
       </div>
 
       {/* Test Mode toggle */}
       <div className="border-t border-[#e7e7e7] py-4">
-
         <div
           role="button"
           tabIndex={0}
           onClick={() => setIsTestMode(!isTestMode)}
           onKeyDown={(e) => e.key === "Enter" && setIsTestMode(!isTestMode)}
-          className="flex w-full cursor-pointer items-center gap-2 rounded-md px-1 py-1.5 text-[15px] text-gray-600 transition-colors hover:bg-gray-100"
+          className="flex w-full cursor-pointer items-center gap-3 rounded-md px-1 py-2 text-[14px] text-[#2f3b4c] transition-colors hover:text-black"
         >
-          <FlaskConicalIcon className="h-4 w-4 shrink-0 text-gray-500" />
-          <span className="flex-1 text-left text-sm">Test Mode</span>
+          <FlaskConicalIcon className="h-5 w-5 shrink-0 text-[#8a8f98]" />
+          <span className="flex-1 text-left">Test Mode</span>
           <Switch
             checked={isTestMode}
             onCheckedChange={setIsTestMode}
@@ -145,10 +151,10 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
 
         <div
           onClick={() => router.push("/settings")}
-          className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-2 hover:bg-gray-100"
+          className="flex cursor-pointer items-center gap-3 rounded-md px-1 py-2 text-[14px] text-[#2f3b4c] transition-colors hover:text-black"
         >
-          <Settings className="h-4 w-4" />
-          <span className="text-sm">Account & Settings</span>
+          <Settings className="h-5 w-5 text-[#2f3b4c]" />
+          <span>Account & Settings</span>
         </div>
       </div>
 
@@ -156,7 +162,6 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
       <div className="pb-4 text-xs whitespace-nowrap text-gray-400">
         Privacy Policy | Terms & Conditions
       </div>
-
     </div>
   );
 }

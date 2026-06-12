@@ -10,6 +10,14 @@ import { useProject }  from "@/components/layout/projectContext";
 import { useTestMode } from "@/components/layout/testModeContext";
 import PaginationControl from "@/components/ui/pagination-control";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   listSmartAiAssessments,
   getSmartAiSessions,
   type SmartAiAssessmentItem,
@@ -79,13 +87,13 @@ function SkeletonRows({ cols }: { cols: number }) {
   return (
     <>
       {[1, 2, 3, 4].map((i) => (
-        <tr key={i} className="border-b border-neutral-100">
+        <TableRow key={i} className="h-[64px] border-b">
           {Array.from({ length: cols }).map((_, j) => (
-            <td key={j} className="px-4 py-3">
+            <TableCell key={j} className="px-6 py-4">
               <div className="h-4 animate-pulse rounded bg-neutral-200" style={{ width: `${60 + (j * 17) % 30}%` }} />
-            </td>
+            </TableCell>
           ))}
-        </tr>
+        </TableRow>
       ))}
     </>
   );
@@ -188,46 +196,46 @@ export default function WhitecollarRequestsPage() {
 
         {/* Candidates table */}
         <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b bg-white hover:bg-white">
                 {["Name", "Email", "Status", "Result", "Assigned", "Submitted"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-[#8a8a8a]">
+                  <TableHead key={h} className="h-14 px-6 text-[13px] font-medium text-[#6f7582]">
                     {h}
-                  </th>
+                  </TableHead>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {sessLoading ? (
                 <SkeletonRows cols={6} />
               ) : sessions.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-[13px] text-neutral-400">
+                <TableRow>
+                  <TableCell colSpan={6} className="px-6 py-12 text-center text-[13px] text-neutral-400">
                     No candidate sessions found.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 sessions.map((s, i) => (
-                  <tr key={i} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50/60">
-                    <td className="px-4 py-3 font-medium text-[#1f1f1f]">
+                  <TableRow key={i} className="h-[64px] border-b hover:bg-neutral-50">
+                    <TableCell className="px-6 py-4 text-[13px] font-semibold text-[#111827]">
                       <div className="flex items-center gap-2">
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-[11px] font-semibold text-neutral-600">
                           {(s.name ?? "?")[0]?.toUpperCase()}
                         </span>
                         {s.name}
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-[#6a6a6a]">{s.email}</td>
-                    <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
-                    <td className="px-4 py-3"><ResultBadge passed={s.passed} score={s.score} /></td>
-                    <td className="px-4 py-3 text-[#6a6a6a]">{fmt(s.assignedAt)}</td>
-                    <td className="px-4 py-3 text-[#6a6a6a]">{fmt(s.submittedAt)}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="px-6 text-[13px] text-[#2f3b4c]">{s.email}</TableCell>
+                    <TableCell className="px-6"><StatusBadge status={s.status} /></TableCell>
+                    <TableCell className="px-6"><ResultBadge passed={s.passed} score={s.score} /></TableCell>
+                    <TableCell className="px-6 text-[13px] text-[#2f3b4c]">{fmt(s.assignedAt)}</TableCell>
+                    <TableCell className="px-6 text-[13px] text-[#2f3b4c]">{fmt(s.submittedAt)}</TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
     );
@@ -236,6 +244,8 @@ export default function WhitecollarRequestsPage() {
   // ── Pagination ─────────────────────────────────────────────────────────────
   const totalPages = Math.max(1, Math.ceil(assessments.length / PAGE_SIZE));
   const pagedAssessments = assessments.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const currentFrom = assessments.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const currentTo = Math.min(page * PAGE_SIZE, assessments.length);
 
   // ── List view ──────────────────────────────────────────────────────────────
   return (
@@ -255,55 +265,56 @@ export default function WhitecollarRequestsPage() {
 
       {/* Table */}
       <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="border-b border-neutral-200 bg-neutral-50">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b bg-white hover:bg-white">
               {["Assessment Name", "Type", "Status", "Candidates", "Created"].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-[#8a8a8a]">
+                <TableHead key={h} className="h-14 px-6 text-[13px] font-medium text-[#6f7582]">
                   {h}
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {loading ? (
               <SkeletonRows cols={5} />
             ) : assessments.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-16 text-center text-[13px] text-neutral-400">
+              <TableRow>
+                <TableCell colSpan={5} className="px-6 py-16 text-center text-[13px] text-neutral-400">
                   {isDefaultProject
                     ? "No Smart AI assessments yet."
                     : "Smart AI assessments are only available in the Default project."}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               pagedAssessments.map((a) => (
-                <tr
+                <TableRow
                   key={a.assessmentId}
                   onClick={() => openAssessment(a)}
-                  className="cursor-pointer border-b border-neutral-100 last:border-0 hover:bg-neutral-50/70 transition-colors"
+                  className="h-[64px] cursor-pointer border-b hover:bg-neutral-50"
                 >
-                  <td className="px-4 py-3 font-medium text-[#1f1f1f]">{a.jobTitle || "Untitled"}</td>
-                  <td className="px-4 py-3"><TypeBadge type={a.type} /></td>
-                  <td className="px-4 py-3"><StatusBadge status={a.status} /></td>
-                  <td className="px-4 py-3 text-[#6a6a6a]">{a.totalUsers}</td>
-                  <td className="px-4 py-3 text-[#6a6a6a]">{fmt(a.createdAt)}</td>
-                </tr>
+                  <TableCell className="px-6 py-4 text-[13px] font-semibold text-[#111827]">{a.jobTitle || "Untitled"}</TableCell>
+                  <TableCell className="px-6"><TypeBadge type={a.type} /></TableCell>
+                  <TableCell className="px-6"><StatusBadge status={a.status} /></TableCell>
+                  <TableCell className="px-6 text-[13px] text-[#2f3b4c]">{a.totalUsers}</TableCell>
+                  <TableCell className="px-6 text-[13px] text-[#2f3b4c]">{fmt(a.createdAt)}</TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
 
-      {!loading && assessments.length > PAGE_SIZE && (
-        <div className="flex justify-end px-1 pt-1">
-          <PaginationControl
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-          />
+        {!loading && assessments.length > 0 && (
+          <div className="flex items-center justify-between border-t border-neutral-200 bg-neutral-50 px-6 py-4 text-[13px] text-[#6f7582]">
+            <p>{`Showing ${currentFrom}-${currentTo} of ${assessments.length} API Request${assessments.length === 1 ? "" : "s"}`}</p>
+            <PaginationControl
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
         </div>
-      )}
     </div>
   );
 }

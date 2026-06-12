@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ClipboardList, ExternalLink, Plus, Users } from "lucide-react";
+import { ClipboardList, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { useOrg }      from "@/components/layout/orgContext";
@@ -13,17 +13,11 @@ import { Badge }       from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
 import PaginationControl from "@/components/ui/pagination-control";
 
 import AssignAssessmentModal from "@/components/whitecollar/assessments/AssignAssessmentModal";
-import { listOrgAssignments, type AssignmentItem, type CandidateRecord } from "@/api/assessmentAssignment.api";
+import { listOrgAssignments, type AssignmentItem } from "@/api/assessmentAssignment.api";
 import { listAssessments,  type AssessmentItem }  from "@/api/assessment.api";
-
-const ASSESSMENT_PORTAL_URL = process.env.NEXT_PUBLIC_ASSESSMENT_PORTAL_URL ?? "";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 function getAccessToken() {
   if (typeof window === "undefined") return "";
   return localStorage.getItem("auth_access_token") ?? "";
@@ -31,49 +25,23 @@ function getAccessToken() {
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   }).format(new Date(value));
 }
-
-function reportUrl(assessmentId: string, candidateId: string) {
-  return `${ASSESSMENT_PORTAL_URL}/assessment/${assessmentId}/report/${candidateId}`;
-}
-
-// ── Candidate status badge ────────────────────────────────────────────────────
-
-const STATUS_STYLE: Record<CandidateRecord["status"], string> = {
-  pending:   "bg-neutral-100 text-neutral-500",
-  started:   "bg-amber-50 text-amber-600",
-  completed: "bg-emerald-50 text-emerald-600",
-  expired:   "bg-red-50 text-red-500",
-};
-
-function StatusBadge({ status }: { status: CandidateRecord["status"] }) {
-  return (
-    <span className={cn(
-      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize",
-      STATUS_STYLE[status],
-    )}>
-      {status}
-    </span>
-  );
-}
-
-// ── Skeleton ──────────────────────────────────────────────────────────────────
 
 function SkeletonRow() {
   return (
     <TableRow>
       {[160, 140, 80, 100, 80, 80].map((w, i) => (
-        <TableCell key={i} className="px-5 py-4">
+        <TableCell key={i} className="px-6 py-4">
           <div className="h-3.5 animate-pulse rounded bg-neutral-100" style={{ width: w }} />
         </TableCell>
       ))}
     </TableRow>
   );
 }
-
-// ── Empty state ───────────────────────────────────────────────────────────────
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
@@ -102,82 +70,6 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
   );
 }
 
-// ── Expanded candidate sub-table ──────────────────────────────────────────────
-
-function CandidateSubTable({
-  assignment,
-  assessmentName,
-}: {
-  assignment: AssignmentItem;
-  assessmentName: string;
-}) {
-  const { candidates, assessmentId } = assignment;
-
-  return (
-    <TableRow className="bg-[#fafafa] hover:bg-[#fafafa]">
-      <TableCell colSpan={7} className="px-0 py-0">
-        <div className="border-t border-neutral-100 px-8 py-4">
-          <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-[#9a9a9a]">
-            Candidates — {assessmentName}
-          </p>
-
-          {candidates.length === 0 ? (
-            <p className="text-[13px] text-[#9a9a9a]">No candidates in this batch.</p>
-          ) : (
-            <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-neutral-100 bg-neutral-50">
-                    <th className="px-4 py-2.5 text-left text-[12px] font-medium text-[#7a7a7a]">Name</th>
-                    <th className="px-4 py-2.5 text-left text-[12px] font-medium text-[#7a7a7a]">Email</th>
-                    <th className="px-4 py-2.5 text-left text-[12px] font-medium text-[#7a7a7a]">Status</th>
-                    <th className="px-4 py-2.5 text-left text-[12px] font-medium text-[#7a7a7a]">Assigned</th>
-                    <th className="px-4 py-2.5 text-right text-[12px] font-medium text-[#7a7a7a]">Result</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {candidates.map((c) => (
-                    <tr key={c.candidateId} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
-                      <td className="px-4 py-3 text-[13px] font-medium text-[#1f1f1f]">{c.name}</td>
-                      <td className="px-4 py-3 text-[13px] text-[#6a6a6a]">{c.email}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={c.status} />
-                      </td>
-                      <td className="px-4 py-3 text-[12px] text-[#9a9a9a]">
-                        {formatDate(c.assignedAt)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <a
-                          href={reportUrl(assessmentId, c.candidateId)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={cn(
-                            "inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[12px] font-medium transition-colors",
-                            c.status === "completed"
-                              ? "bg-[#ff5723] text-white hover:bg-[#f04d1d]"
-                              : "cursor-not-allowed bg-neutral-100 text-neutral-400",
-                          )}
-                          onClick={(e) => {
-                            if (c.status !== "completed") e.preventDefault();
-                          }}
-                        >
-                          View Result
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AssignPage() {
   const router            = useRouter();
@@ -195,9 +87,12 @@ export default function AssignPage() {
   const [modalOpen,    setModalOpen]    = useState(false);
   const [page,         setPage]         = useState(1);
   const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(assignments.length / PAGE_SIZE));
+  const currentFrom = assignments.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const currentTo = Math.min(page * PAGE_SIZE, assignments.length);
+  const pagedAssignments = assignments.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // ── Fetch assignments ───────────────────────────────────────────────────────
-
+  
   const fetchAssignments = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
@@ -212,8 +107,7 @@ export default function AssignPage() {
     }
   }, [orgId, mode, projectId]);
 
-  // ── Fetch assessments (for modal dropdown) ──────────────────────────────────
-
+  
   const fetchAssessments = useCallback(async () => {
     if (!orgId) return;
     try {
@@ -227,8 +121,7 @@ export default function AssignPage() {
     fetchAssessments();
   }, [fetchAssignments, fetchAssessments]);
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
-
+  
   const getAssessmentName = (assessmentId: string) =>
     assessments.find((a) => a.assessmentId === assessmentId)?.name ?? assessmentId;
 
@@ -236,8 +129,7 @@ export default function AssignPage() {
     router.push(`/whitecollar/assign/${assignmentId}`);
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────────
-
+  
   return (
     <div className="space-y-5 p-6">
 
@@ -256,10 +148,10 @@ export default function AssignPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-md border border-neutral-200 bg-white [&_th]:px-6 [&_th]:py-4 [&_td]:px-6">
+      <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white [&_thead_tr]:border-b [&_thead_tr]:bg-white [&_thead_tr:hover]:bg-white [&_th]:h-14 [&_th]:px-6 [&_th]:text-[13px] [&_th]:font-medium [&_th]:text-[#6f7582] [&_tbody_tr]:h-[64px] [&_tbody_tr]:border-b [&_tbody_tr:hover]:bg-neutral-50 [&_td]:px-6">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="border-b bg-white hover:bg-white">
               <TableHead>Batch Name</TableHead>
               <TableHead>Assessment</TableHead>
               <TableHead>Tag</TableHead>
@@ -277,10 +169,9 @@ export default function AssignPage() {
               <EmptyState onAdd={() => setModalOpen(true)} />
 
             ) : (
-              assignments.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((a) => {
+              pagedAssignments.map((a) => {
                 return (
-                  <>
-                    <TableRow key={a.assignmentId}>
+                  <TableRow key={a.assignmentId} className="h-[64px] border-b hover:bg-neutral-50">
                       {/* Batch name + ID */}
                       <TableCell className="py-4">
                         <p className="text-[13px] font-semibold text-[#1f1f1f]">{a.batchName}</p>
@@ -304,7 +195,7 @@ export default function AssignPage() {
                             {a.tag}
                           </span>
                         ) : (
-                          <span className="text-[12px] text-[#bbb]">—</span>
+                          <span className="text-[12px] text-[#bbb]">-</span>
                         )}
                       </TableCell>
 
@@ -339,24 +230,23 @@ export default function AssignPage() {
                           View Candidates
                         </Button>
                       </TableCell>
-                    </TableRow>
-
-                  </>
+                  </TableRow>
                 );
               })
             )}
           </TableBody>
-        </Table>       
-      </div>
+        </Table>
       {assignments.length > 0 && (
-          <div className="flex items-center justify-end px-5 py-4">
+          <div className="flex items-center justify-between border-t border-neutral-200 bg-neutral-50 px-6 py-4 text-[13px] text-[#6f7582]">
+            <p>{`Showing ${currentFrom}-${currentTo} of ${assignments.length} Assignment${assignments.length === 1 ? "" : "s"}`}</p>
             <PaginationControl
               currentPage={page}
-              totalPages={Math.max(1, Math.ceil(assignments.length / PAGE_SIZE))}
+              totalPages={totalPages}
               onPageChange={(p) => setPage(p)}
             />
           </div>
         )}
+      </div>
 
       {/* Assign Modal */}
       <AssignAssessmentModal

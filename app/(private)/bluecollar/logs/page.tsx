@@ -308,6 +308,7 @@ export default function LogsPage() {
   const { activeOrg } = useOrg();
   const { isTestMode } = useTestMode();
   const mode = isTestMode ? "test" : "live";
+  const orgId = activeOrg?.orgId ?? "";
 
   const [logs, setLogs]           = useState<LogItem[]>([]);
   const [total, setTotal]         = useState(0);
@@ -324,16 +325,16 @@ export default function LogsPage() {
 
   // Fetch workflows once for the dropdown
   useEffect(() => {
-    if (!activeOrg?.orgId) return;
+    if (!orgId) return;
     const token = getAccessToken();
     if (!token) return;
-    listWorkflows(activeOrg.orgId, 1, 100, mode, token)
+    listWorkflows(orgId, 1, 100, mode, token)
       .then((res) => setWorkflows(res.data?.workflows ?? []))
       .catch(() => undefined);
-  }, [activeOrg?.orgId, mode]);
+  }, [orgId, mode]);
 
   const loadLogs = useCallback(() => {
-    if (!activeOrg?.orgId) return;
+    if (!orgId) return;
     const token = getAccessToken();
     if (!token) return;
 
@@ -341,11 +342,11 @@ export default function LogsPage() {
     if (filterWorkflow) filters.workflowId     = filterWorkflow;
     if (filterStatus)   filters.whatsappStatus = filterStatus;
 
-    const key = `${activeOrg.orgId}|${mode}|${page}|${filterWorkflow}|${filterStatus}`;
+    const key = `${orgId}|${mode}|${page}|${filterWorkflow}|${filterStatus}`;
     fetchKeyRef.current = key;
     setLoading(true);
 
-    listLogs(activeOrg.orgId, page, PAGE_LIMIT, mode, token, filters)
+    listLogs(orgId, page, PAGE_LIMIT, mode, token, filters)
       .then((res) => {
         if (fetchKeyRef.current !== key) return;
         if (res.data) {
@@ -360,11 +361,11 @@ export default function LogsPage() {
       .finally(() => {
         if (fetchKeyRef.current === key) setLoading(false);
       });
-  }, [activeOrg?.orgId, mode, page, filterWorkflow, filterStatus]);
+  }, [orgId, mode, page, filterWorkflow, filterStatus]);
 
-  useEffect(() => { loadLogs(); }, [loadLogs]);
-
-  useEffect(() => { setPage(1); }, [filterWorkflow, filterStatus]);
+  useEffect(() => {
+    void Promise.resolve().then(loadLogs);
+  }, [loadLogs]);
 
   const filtered = search.trim()
     ? logs.filter(
@@ -394,21 +395,37 @@ export default function LogsPage() {
           <WorkflowFilterDropdown
             workflows={workflows}
             selected={filterWorkflow}
-            onSelect={setFilterWorkflow}
-            onClear={() => setFilterWorkflow("")}
+            onSelect={(value) => {
+              setFilterWorkflow(value);
+              setPage(1);
+            }}
+            onClear={() => {
+              setFilterWorkflow("");
+              setPage(1);
+            }}
           />
           <FilterDropdown
             label="WA Status"
             options={WHATSAPP_STATUS_OPTIONS}
             selected={filterStatus}
-            onSelect={setFilterStatus}
-            onClear={() => setFilterStatus("")}
+            onSelect={(value) => {
+              setFilterStatus(value);
+              setPage(1);
+            }}
+            onClear={() => {
+              setFilterStatus("");
+              setPage(1);
+            }}
           />
           {hasFilter && (
             <button
               type="button"
               className="text-[12px] text-[#9a9a9a] hover:text-[#4a4a4a]"
-              onClick={() => { setFilterWorkflow(""); setFilterStatus(""); }}
+              onClick={() => {
+                setFilterWorkflow("");
+                setFilterStatus("");
+                setPage(1);
+              }}
             >
               Clear all
             </button>
@@ -552,7 +569,7 @@ export default function LogsPage() {
                   "rounded-md px-3 py-1.5 text-[13px] transition-colors",
                   page <= 1 || loading
                     ? "cursor-not-allowed text-neutral-300"
-                    : "text-[#4a4a4a] hover:bg-neutral-100",
+                    : "cursor-pointer text-[#4a4a4a] hover:bg-neutral-100",
                 )}
               >
                 ‹ Previous
@@ -583,7 +600,7 @@ export default function LogsPage() {
                         "h-8 min-w-[32px] rounded-md px-2 text-[13px] transition-colors",
                         p === page
                           ? "bg-[#ff5723] font-semibold text-white"
-                          : "text-[#4a4a4a] hover:bg-neutral-100",
+                          : "cursor-pointer text-[#4a4a4a] hover:bg-neutral-100",
                       )}
                     >
                       {p}
@@ -600,7 +617,7 @@ export default function LogsPage() {
                   "rounded-md px-3 py-1.5 text-[13px] transition-colors",
                   page >= totalPages || loading
                     ? "cursor-not-allowed text-neutral-300"
-                    : "text-[#4a4a4a] hover:bg-neutral-100",
+                    : "cursor-pointer text-[#4a4a4a] hover:bg-neutral-100",
                 )}
               >
                 Next ›

@@ -67,7 +67,9 @@ export default function ProfileMenu({ email, letter }: ProfileMenuProps) {
             {email || "No email available"}
           </p>
         </DropdownMenuLabel>
-        <DropdownMenuItem>Your profile</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => router.push("/settings")}>
+          Your profile
+        </DropdownMenuItem>
         {/* <DropdownMenuItem>Exit setup</DropdownMenuItem> */}
         {/* <DropdownMenuItem>Terms &amp; policies</DropdownMenuItem> */}
         {/* <DropdownMenuItem>Help</DropdownMenuItem> */}

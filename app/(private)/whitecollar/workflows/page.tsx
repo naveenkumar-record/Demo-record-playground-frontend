@@ -50,7 +50,6 @@ import {
 import { AssessConfigDialog } from "@/components/api-keys/assessConfigDialog";
 import PaginationControl from "@/components/ui/pagination-control";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function getAccessToken() {
   if (typeof window === "undefined") return "";
   return localStorage.getItem("auth_access_token") ?? "";
@@ -70,7 +69,6 @@ function copyText(text: string, label: string) {
     .then(() => toast.message(`${label} copied`));
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
 function SkeletonRow() {
   return (
     <TableRow>
@@ -86,10 +84,9 @@ function SkeletonRow() {
   );
 }
 
-// ── Masked key ────────────────────────────────────────────────────────────────
 function MaskedKey({ value }: { value: string }) {
   const [show, setShow] = useState(false);
-  const display = show ? value : `${value.slice(0, 8)}${"•".repeat(20)}`;
+  const display = show ? value : `${value.slice(0, 8)}${"*".repeat(20)}`;
   return (
     <div className="flex items-center gap-2">
       <span className="font-mono text-[12px] text-[#3a3a3a]">{display}</span>
@@ -115,7 +112,6 @@ function MaskedKey({ value }: { value: string }) {
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
 export default function WorkflowsPage() {
   const { activeOrg } = useOrg();
   const { activeProject } = useProject();
@@ -130,7 +126,6 @@ export default function WorkflowsPage() {
   // Create modal
   const [createOpen, setCreateOpen] = useState(false);
   const [keyName, setKeyName] = useState("");
-  const [emailEnabled, setEmailEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   // Reveal modal (shown once after creation)
   const [revealOpen, setRevealOpen] = useState(false);
@@ -138,7 +133,6 @@ export default function WorkflowsPage() {
   // Assess config dialog
   const [configOpen, setConfigOpen] = useState(false);
   const [configKey, setConfigKey] = useState<ApiKey | null>(null);
-  // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchKeys = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
@@ -163,7 +157,6 @@ export default function WorkflowsPage() {
     fetchKeys();
   }, [fetchKeys]);
 
-  // ── Create ─────────────────────────────────────────────────────────────────
   const handleCreate = async () => {
     if (!orgId) return;
     if (!keyName.trim()) { toast.message("Key name is required"); return; }
@@ -195,7 +188,6 @@ export default function WorkflowsPage() {
     }
   };
 
-  // ── Delete ─────────────────────────────────────────────────────────────────
   const handleDelete = async (keyId: string) => {
     if (!orgId) return;
     setKeys((prev) => prev.filter((k) => k.keyId !== keyId));
@@ -210,10 +202,11 @@ export default function WorkflowsPage() {
 
   const totalPages = Math.max(1, Math.ceil(keys.length / PAGE_SIZE));
   const pagedKeys = keys.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const currentFrom = keys.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const currentTo = Math.min(page * PAGE_SIZE, keys.length);
 
   return (
     <div className="space-y-8 p-6">
-      {/* ── API Keys section ─────────────────────────────────────────────── */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -233,10 +226,10 @@ export default function WorkflowsPage() {
           </Button>
         </div>
 
-        <div className="overflow-hidden rounded-md border border-neutral-200 bg-white [&_th]:px-6 [&_th]:py-4 [&_td]:px-6">
+        <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white [&_thead_tr]:border-b [&_thead_tr]:bg-white [&_thead_tr:hover]:bg-white [&_th]:h-14 [&_th]:px-6 [&_th]:text-[13px] [&_th]:font-medium [&_th]:text-[#6f7582] [&_tbody_tr]:h-[64px] [&_tbody_tr]:border-b [&_tbody_tr:hover]:bg-neutral-50 [&_td]:px-6">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="border-b bg-white hover:bg-white">
                 <TableHead>Name</TableHead>
                 <TableHead className="w-[380px]">API Key</TableHead>
                 <TableHead>Mode</TableHead>
@@ -266,7 +259,6 @@ export default function WorkflowsPage() {
                         className="mt-1 h-9 gap-2 bg-[#ff5723] px-4 text-[13px] font-semibold text-white hover:bg-[#f04d1d]"
                         onClick={() => {
                           setKeyName("");
-                          setEmailEnabled(false);
                           setCreateOpen(true);
                         }}
                       >
@@ -278,7 +270,7 @@ export default function WorkflowsPage() {
                 </TableRow>
               ) : (
                 pagedKeys.map((k) => (
-                  <TableRow key={k.keyId}>
+                  <TableRow key={k.keyId} className="h-[64px] border-b hover:bg-neutral-50">
                     <TableCell>
                       <p className="text-[13px] font-semibold text-[#1f1f1f]">
                         {k.name}
@@ -308,11 +300,11 @@ export default function WorkflowsPage() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-9 w-9 cursor-pointer rounded-md border-neutral-200 bg-white shadow-sm hover:bg-neutral-50"
                           >
-                            <MoreVertical className="h-4 w-4 text-[#697282]" />
+                            <MoreVertical className="h-4 w-4 text-[#1f1f1f]" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-52">
@@ -338,10 +330,9 @@ export default function WorkflowsPage() {
               )}
             </TableBody>
           </Table>
-        </div>
-        {/* ── Footer: count + pagination ───────────────────────────────────── */}
         {!loading && keys.length > 0 && (
-          <div className="flex items-center justify-end px-1 pt-1">
+          <div className="flex items-center justify-between border-t border-neutral-200 bg-neutral-50 px-6 py-4 text-[13px] text-[#6f7582]">
+            <p>{`Showing ${currentFrom}-${currentTo} of ${keys.length} Workflow${keys.length === 1 ? "" : "s"}`}</p>
             <PaginationControl
               currentPage={page}
               totalPages={totalPages}
@@ -349,9 +340,9 @@ export default function WorkflowsPage() {
             />
           </div>
         )}
+        </div>
       </div>
 
-      {/* ── Create API Key modal ─────────────────────────────────────────── */}
       <Dialog
         open={createOpen}
         onOpenChange={(o) => {
@@ -414,13 +405,12 @@ export default function WorkflowsPage() {
               disabled={saving || !keyName.trim()}
               onClick={handleCreate}
             >
-              {saving ? "Creating…" : "Create Key"}
+              {saving ? "Creating..." : "Create Key"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ── Assess config dialog ────────────────────────────────────────── */}
       {configKey && (
         <AssessConfigDialog
           open={configOpen}
@@ -437,7 +427,6 @@ export default function WorkflowsPage() {
         />
       )}
 
-      {/* ── Key reveal modal ────────────────────────────────────────────── */}
       <Dialog open={revealOpen} onOpenChange={setRevealOpen}>
         <DialogContent className="max-w-[480px] p-0">
           <DialogHeader className="border-b border-neutral-200 px-5 py-4">
