@@ -7,7 +7,7 @@ import AppToaster from "@/components/ui/app-toaster";
 import GoogleProvider from "@/components/auth/googleProvider";
 
 export const metadata: Metadata = {
-  title: "Record Studio",
+  title: "Record Playground",
   description: "Record Studio authentication and dashboard",
   icons: {
     icon: "/favicon.ico",

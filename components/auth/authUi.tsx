@@ -39,7 +39,7 @@ export function AuthShell({ children }: AuthShellProps) {
     <div className="flex min-h-screen flex-col bg-white px-4 pb-5 pt-4 sm:px-5 sm:pb-7 sm:pt-[18px]">
       <Link href="/login" className="inline-flex cursor-pointer items-center gap-[9px] text-[11px] leading-none font-medium text-[#303030] sm:text-[12px]">
         <Image src="/logo.png" alt="Record Studio" width={24} height={24} />
-        <span className="text-[14px] sm:text-[16px]">Record Studio</span>
+        <span className="text-[14px] sm:text-[16px]">Record Playground</span>
       </Link>
 
       <div className="grid flex-1 place-items-center px-0 py-4 pb-2 sm:py-[18px]">
@@ -63,8 +63,8 @@ export function AuthCard({
   return (
     <section className="w-full max-w-[380px] px-0.5 text-center sm:px-0">
       {showBrandLogo ? (
-        <div className="mb-3 grid place-items-center sm:mb-[14px]">
-          <Image src="/logo.png" alt="Record Studio" width={44} height={44} />
+        <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-[12px] bg-[#f7f7f8] sm:mb-[14px]">
+          <Image src="/logo.png" alt="Record Studio" width={36} height={36} />
         </div>
       ) : null}
 
@@ -75,7 +75,7 @@ export function AuthCard({
         />
       ) : null}
 
-      <h1 className="app-text-heading m-0 !text-[22px] font-bold tracking-[-0.01em] text-[#141414]">
+      <h1 className="app-text-heading m-0 !text-[24px] font-bold tracking-[-0.02em] text-[#111111]">
         {title}
       </h1>
       {subtitle ? (
@@ -86,13 +86,24 @@ export function AuthCard({
   );
 }
 
-export function AuthInput({ name, label, ...props }: AuthInputProps) {
+export function AuthInput({ name, label, className, ...props }: AuthInputProps) {
   return (
     <div className="text-left">
-      <Label htmlFor={name} className="text-sm mb-2 block font-semibold text-black ">
+      <Label
+        htmlFor={name}
+        className="mb-2 block text-[12px] font-medium text-[#202020]"
+      >
         {label}
       </Label>
-      <Input id={name} name={name} {...props} />
+      <Input
+        id={name}
+        name={name}
+        className={cn(
+          "h-10 rounded-[9px] border-[#e2e2e2] bg-white px-3 text-[13px] shadow-none placeholder:text-[#b4bac4] focus-visible:border-[#ff5723] focus-visible:ring-[#ff5723]/15",
+          className,
+        )}
+        {...props}
+      />
     </div>
   );
 }
@@ -158,7 +169,7 @@ export function AuthOrDivider() {
     <div className="my-[9px] flex items-center gap-2.5 sm:gap-[14px]">
       <Separator className="flex-1 bg-[#ececec]" />
       <p className="m-0 text-[13px] leading-none text-[#a3a3a3] sm:text-[14px]">
-        or
+        OR
       </p>
       <Separator className="flex-1 bg-[#ececec]" />
     </div>

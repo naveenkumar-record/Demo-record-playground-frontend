@@ -107,16 +107,16 @@ export default function Page() {
     return (
       <AuthShell>
         <AuthCard
-          title="Welcome To Record"
-          subtitle="Login or Sign up"
+          title="Welcome back"
           showBrandLogo
         >
           <AuthForm onSubmit={handleEmailSubmit}>
             <AuthInput
               name="email"
-              label="Email address"
-              placeholder="name@email.com"
+              label="Email Address"
+              placeholder="name@gmail.com"
               type="email"
+              autoComplete="email"
             />
             <PrimaryAuthButton disabled={isSubmitting}>
               {isSubmitting ? "Signing in..." : "Continue"}
@@ -131,7 +131,7 @@ export default function Page() {
 
   return (
     <AuthShell>
-      <AuthCard title="Enter Your Password" showBrandLogo>
+      <AuthCard title="Welcome back" showBrandLogo>
         <AuthForm onSubmit={handleLoginSubmit}>
           <div className="relative">
             <AuthInput
@@ -178,6 +178,8 @@ export default function Page() {
             {isSubmitting ? "Signing in..." : "Continue"}
           </PrimaryAuthButton>
         </AuthForm>
+        <AuthOrDivider />
+        <GoogleAuthButton />
       </AuthCard>
     </AuthShell>
   );

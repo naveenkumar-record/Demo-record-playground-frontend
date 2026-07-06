@@ -96,14 +96,14 @@ export default function Page() {
   if (step === "enter-password") {
     return (
       <AuthShell>
-        <AuthCard title="Create password" showBrandLogo>
+        <AuthCard title="Welcome back" showBrandLogo>
           <AuthForm onSubmit={handlePasswordSubmit}>
             <div className="flex flex-col gap-1 text-left">
               <label className="mb-2 block font-semibold text-black text-sm">
                 Email address
               </label>
               <div className="flex items-center justify-between rounded-md border border-input bg-[#f5f5f5] px-3 py-2 text-sm">
-                <span className="text-[#8a8a8a]">{initialEmail}</span>
+                <span className="text-[#424242]">{initialEmail}</span>
                 <button
                   type="button"
                   onClick={() => router.push("/login")}
